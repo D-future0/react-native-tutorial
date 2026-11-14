@@ -37,7 +37,7 @@ The iOS command requires macOS and Xcode. The web command starts the Expo web ta
 - **Input controls:** text inputs include appropriate keyboard types; the address supports multiline entry and a live character count.
 - **Date of birth picker:** uses the native date picker, with a calendar display on Android and inline picker on iOS. The selected date is stored as `YYYY-MM-DD`.
 - **Class selection:** offers Class 1, Class 2, and Class 3.
-- **Validation:** requires student name, email, phone number, date of birth, and address. Email is checked for a basic email format, phone number must contain exactly 10 digits, and address must be at least 10 characters. Errors appear beside the relevant field and clear when that field is edited. Class and parent contact fields are currently optional.
+- **Validation:** requires student name, email, phone number, date of birth, and address. Email is checked for a basic email format, the required student phone number must be 11 digits in Nigerian local format starting with `0`, and address must be at least 10 characters. A date of birth cannot be in the future. Errors appear beside the relevant field and clear when that field is edited. Class and parent contact fields are optional; if a parent phone number is entered, it must also use the 11-digit Nigerian local format.
 - **Review and edit:** successful submission opens a summary screen. Choose **Edit registration** to return to the populated form.
 - **Reset:** **Start new registration** asks for confirmation before clearing the current details.
 - **Mobile usability and accessibility:** safe-area layout, scrollable content, keyboard-aware screen behavior, next-field keyboard navigation, and accessibility labels/states on interactive controls.

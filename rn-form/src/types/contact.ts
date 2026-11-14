@@ -26,6 +26,7 @@ export type FormFieldProps = {
   error?: string;
   multiline?: boolean;
   keyboardType?: TextInputProps["keyboardType"];
+  maxLength?: TextInputProps["maxLength"];
   autoCapitalize?: TextInputProps["autoCapitalize"];
   autoCorrect?: boolean;
   inputRef?: Ref<TextInputInstance>;

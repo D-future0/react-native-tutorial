@@ -15,6 +15,7 @@ export default function FormField({
   error,
   multiline = false,
   keyboardType = "default",
+  maxLength,
   autoCapitalize = "sentences",
   autoCorrect = true,
   inputRef,
@@ -37,6 +38,7 @@ export default function FormField({
         onChangeText={onChangeText}
         placeholder={placeholder}
         keyboardType={keyboardType}
+        maxLength={maxLength}
         autoCapitalize={autoCapitalize}
         autoCorrect={autoCorrect}
         multiline={multiline}

@@ -88,6 +88,13 @@ export default function StudentRegistrationScreen() {
 
   };
 
+  const updatePhoneField = (
+    field: "phone" | "parentPhone",
+    value: string,
+  ) => {
+    updateField(field, value.replace(/\D/g, "").slice(0, 11));
+  };
+
   const handleSubmit = async () => {
     Keyboard.dismiss();
     setSubmitError("");
@@ -182,12 +189,11 @@ export default function StudentRegistrationScreen() {
             <FormField
               label="Phone number"
               value={String(form.phone)}
-              onChangeText={(value) =>
-                updateField("phone", value)
-              }
-              placeholder="Enter your phone number"
+              onChangeText={(value) => updatePhoneField("phone", value)}
+              placeholder="e.g. 08012345678"
               error={errors.phone}
               keyboardType="number-pad"
+              maxLength={11}
               inputRef={phoneRef}
               onSubmitEditing={() => parentNameRef.current?.focus()}
               returnKeyType="next"
@@ -204,6 +210,7 @@ export default function StudentRegistrationScreen() {
               }
               placeholder="Select your date of birth"
               error={errors.dateOfBirth}
+              options={{ maximumDate: new Date() }}
             />
             <SelectField
               label="Class"
@@ -230,12 +237,11 @@ export default function StudentRegistrationScreen() {
             <FormField
               label="Parent's Phone Number"
               value={form.parentPhone}
-              onChangeText={(value) =>
-                updateField("parentPhone", value)
-              }
-              placeholder="Enter your parent's phone number"
+              onChangeText={(value) => updatePhoneField("parentPhone", value)}
+              placeholder="e.g. 08012345678"
               error={errors.parentPhone}
               keyboardType="number-pad"
+              maxLength={11}
               inputRef={parentPhoneRef}
               onSubmitEditing={() => addressRef.current?.focus()}
               returnKeyType="next"
