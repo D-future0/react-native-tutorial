@@ -37,7 +37,7 @@ The iOS command requires macOS and Xcode. The web command starts the Expo web ta
 - **Input controls:** text inputs include appropriate keyboard types; the address supports multiline entry and a live character count.
 - **Date of birth picker:** uses the native date picker, with a calendar display on Android and inline picker on iOS. The selected date is stored as `YYYY-MM-DD`.
 - **Class selection:** offers Class 1, Class 2, and Class 3.
-- **Validation:** requires student name, email, phone number, date of birth, and address. Email is checked for a basic email format, the required student phone number must be 11 digits in Nigerian local format starting with `0`, and address must be at least 10 characters. A date of birth cannot be in the future. Errors appear beside the relevant field and clear when that field is edited. Class and parent contact fields are optional; if a parent phone number is entered, it must also use the 11-digit Nigerian local format.
+- **Validation:** requires student name, email, phone number, date of birth, class, parent name, parent phone number, and address. Email is checked for a basic email format, both phone numbers must be 11 digits in Nigerian local format starting with `0`, and address must be at least 10 characters. A date of birth cannot be in the future. Errors appear beside the relevant field and clear when that field is edited.
 - **Review and edit:** successful submission opens a summary screen. Choose **Edit registration** to return to the populated form.
 - **Reset:** **Start new registration** asks for confirmation before clearing the current details.
 - **Mobile usability and accessibility:** safe-area layout, scrollable content, keyboard-aware screen behavior, next-field keyboard navigation, and accessibility labels/states on interactive controls.
@@ -45,7 +45,8 @@ The iOS command requires macOS and Xcode. The web command starts the Expo web ta
 ## Responsive layout and platform decisions
 
 - **Orientation:** the app uses Expo's `default` orientation instead of locking to portrait, so the form can be used in portrait or landscape. iOS tablet support is enabled.
-- **Form width:** the registration form fills the available width on smaller screens, keeps 20 px of horizontal padding, and is centered with a maximum width of 640 px on larger screens. This keeps fields usable on phones without letting them become uncomfortably wide on tablets or desktop-sized windows. The form remains a single column so fields stay easy to follow at narrow widths.
+- **Form width:** the registration form fills the available width on smaller screens, keeps 20 px of horizontal padding, and is centered with a maximum width of 840 px on larger screens. Fields wrap into two columns when there is room for two 250 px columns; on narrow screens they remain a single column. The heading and submit area span the full form width.
+- **Platform-specific surface styling:** `Platform.select()` applies an iOS shadow or Android elevation to the form card. Other platforms keep the shared background and border styling without native elevation settings.
 - **Keyboard handling:** the form scrolls when space is limited and adjusts for the keyboard using `padding` on iOS and `height` on other platforms.
 - **Date picker:** iOS uses an inline calendar with a **Done** button; Android uses the calendar picker and closes it after a date is selected. This follows each platform's native interaction style.
 

@@ -26,12 +26,19 @@ export function validateForm(
     errors.phone = "Enter an 11-digit Nigerian local number starting with 0";
   }
 
-  if (
-    values.parentPhone.trim() &&
-    !/^0\d{10}$/.test(values.parentPhone.trim())
-  ) {
+  if (!values.parentName.trim()) {
+    errors.parentName = "Parent's name is required";
+  }
+
+  if (!values.parentPhone.trim()) {
+    errors.parentPhone = "Parent's phone number is required";
+  } else if (!/^0\d{10}$/.test(values.parentPhone.trim())) {
     errors.parentPhone =
       "Enter an 11-digit Nigerian local number starting with 0";
+  }
+
+  if (!values.class.trim()) {
+    errors.class = "Class is required";
   }
 
   if (!values.dateOfBirth.trim()) {

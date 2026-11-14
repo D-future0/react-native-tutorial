@@ -148,126 +148,146 @@ export default function StudentRegistrationScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <ResponsiveContainer maxWidth={640}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Student Registration Form</Text>
+          <ResponsiveContainer maxWidth={840}>
+            <View style={styles.fullWidth}>
+              <View style={styles.header}>
+                <Text style={styles.title}>Student Registration Form</Text>
 
-              <Text style={styles.subtitle}>
-                Fill the form below.
-              </Text>
+                <Text style={styles.subtitle}>
+                  Fill the form below.
+                </Text>
+              </View>
             </View>
 
-            <FormField
-              label="Student's full name"
-              value={form.fullName}
-              onChangeText={(value) =>
-                updateField("fullName", value)
-              }
-              placeholder="Enter your full name"
-              error={errors.fullName}
-              autoCapitalize="words"
-              onSubmitEditing={() => emailRef.current?.focus()}
-              returnKeyType="next"
-            />
+            <View style={styles.fieldCell}>
+              <FormField
+                label="Student's full name"
+                value={form.fullName}
+                onChangeText={(value) =>
+                  updateField("fullName", value)
+                }
+                placeholder="Enter your full name"
+                error={errors.fullName}
+                autoCapitalize="words"
+                onSubmitEditing={() => emailRef.current?.focus()}
+                returnKeyType="next"
+              />
+            </View>
 
-            <FormField
-              label="Email address"
-              value={form.email}
-              onChangeText={(value) =>
-                updateField("email", value)
-              }
-              placeholder="example@email.com"
-              error={errors.email}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              inputRef={emailRef}
-              onSubmitEditing={() => phoneRef.current?.focus()}
-              returnKeyType="next"
-            />
+            <View style={styles.fieldCell}>
+              <FormField
+                label="Email address"
+                value={form.email}
+                onChangeText={(value) =>
+                  updateField("email", value)
+                }
+                placeholder="example@email.com"
+                error={errors.email}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                inputRef={emailRef}
+                onSubmitEditing={() => phoneRef.current?.focus()}
+                returnKeyType="next"
+              />
+            </View>
 
-            <FormField
-              label="Phone number"
-              value={String(form.phone)}
-              onChangeText={(value) => updatePhoneField("phone", value)}
-              placeholder="e.g. 08012345678"
-              error={errors.phone}
-              keyboardType="number-pad"
-              maxLength={11}
-              inputRef={phoneRef}
-              onSubmitEditing={() => parentNameRef.current?.focus()}
-              returnKeyType="next"
-            />
+            <View style={styles.fieldCell}>
+              <FormField
+                label="Phone number"
+                value={String(form.phone)}
+                onChangeText={(value) => updatePhoneField("phone", value)}
+                placeholder="e.g. 08012345678"
+                error={errors.phone}
+                keyboardType="number-pad"
+                maxLength={11}
+                inputRef={phoneRef}
+                onSubmitEditing={() => parentNameRef.current?.focus()}
+                returnKeyType="next"
+              />
+            </View>
 
-            <DatePickerField
-              label="Date of Birth"
-              value={parseDateOfBirth(form.dateOfBirth)}
-              onChange={(date) =>
-                updateField(
-                  "dateOfBirth",
-                  date ? formatDateOfBirth(date) : "",
-                )
-              }
-              placeholder="Select your date of birth"
-              error={errors.dateOfBirth}
-              options={{ maximumDate: new Date() }}
-            />
-            <SelectField
-              label="Class"
-              value={form.class}
-              onChange={(value) =>
-                updateField("class", value)
-              }
-              options={classes}
-              placeholder="Select your class"
-              error={errors.class}
-            />
-            <FormField
-              label="Parent's Name"
-              value={form.parentName}
-              onChangeText={(value) =>
-                updateField("parentName", value)
-              }
-              placeholder="Enter your parent's name"
-              error={errors.parentName}
-              inputRef={parentNameRef}
-              onSubmitEditing={() => parentPhoneRef.current?.focus()}
-              returnKeyType="next"
-            />
-            <FormField
-              label="Parent's Phone Number"
-              value={form.parentPhone}
-              onChangeText={(value) => updatePhoneField("parentPhone", value)}
-              placeholder="e.g. 08012345678"
-              error={errors.parentPhone}
-              keyboardType="number-pad"
-              maxLength={11}
-              inputRef={parentPhoneRef}
-              onSubmitEditing={() => addressRef.current?.focus()}
-              returnKeyType="next"
-            />
-            <FormField
-              label="Address"
-              value={form.address}
-              onChangeText={(value) =>
-                updateField("address", value)
-              }
-              placeholder="Enter your address"
-              error={errors.address}
-              inputRef={addressRef}
-              onSubmitEditing={Keyboard.dismiss}
-              returnKeyType="done"
-              showCharacterCount
-            />
+            <View style={styles.fieldCell}>
+              <DatePickerField
+                label="Date of Birth"
+                value={parseDateOfBirth(form.dateOfBirth)}
+                onChange={(date) =>
+                  updateField(
+                    "dateOfBirth",
+                    date ? formatDateOfBirth(date) : "",
+                  )
+                }
+                placeholder="Select your date of birth"
+                error={errors.dateOfBirth}
+                options={{ maximumDate: new Date() }}
+              />
+            </View>
+            <View style={styles.fieldCell}>
+              <SelectField
+                label="Class"
+                value={form.class}
+                onChange={(value) =>
+                  updateField("class", value)
+                }
+                options={classes}
+                placeholder="Select your class"
+                error={errors.class}
+              />
+            </View>
+            <View style={styles.fieldCell}>
+              <FormField
+                label="Parent's Name"
+                value={form.parentName}
+                onChangeText={(value) =>
+                  updateField("parentName", value)
+                }
+                placeholder="Enter your parent's name"
+                error={errors.parentName}
+                inputRef={parentNameRef}
+                onSubmitEditing={() => parentPhoneRef.current?.focus()}
+                returnKeyType="next"
+              />
+            </View>
+            <View style={styles.fieldCell}>
+              <FormField
+                label="Parent's Phone Number"
+                value={form.parentPhone}
+                onChangeText={(value) => updatePhoneField("parentPhone", value)}
+                placeholder="e.g. 08012345678"
+                error={errors.parentPhone}
+                keyboardType="number-pad"
+                maxLength={11}
+                inputRef={parentPhoneRef}
+                onSubmitEditing={() => addressRef.current?.focus()}
+                returnKeyType="next"
+              />
+            </View>
+            <View style={styles.fieldCell}>
+              <FormField
+                label="Address"
+                value={form.address}
+                onChangeText={(value) =>
+                  updateField("address", value)
+                }
+                placeholder="Enter your address"
+                error={errors.address}
+                inputRef={addressRef}
+                onSubmitEditing={Keyboard.dismiss}
+                returnKeyType="done"
+                showCharacterCount
+              />
+            </View>
 
-            {submitError ? (
-              <Text style={styles.submitError}>{submitError}</Text>
-            ) : null}
+            <View style={styles.fullWidth}>
+              {submitError ? (
+                <Text style={styles.submitError}>{submitError}</Text>
+              ) : null}
 
-            <SubmitButton
-              onPress={handleSubmit}
-              isSubmitting={isSubmitting}
-            />
+              <SubmitButton
+                onPress={handleSubmit}
+                isSubmitting={isSubmitting}
+              />
+            </View>
           </ResponsiveContainer>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -285,6 +305,14 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
+  },
+  fullWidth: {
+    width: "100%",
+  },
+  fieldCell: {
+    flexBasis: 250,
+    flexGrow: 1,
+    flexShrink: 1,
   },
   header: {
     marginBottom: 28,
