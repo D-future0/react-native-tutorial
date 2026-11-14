@@ -42,6 +42,13 @@ The iOS command requires macOS and Xcode. The web command starts the Expo web ta
 - **Reset:** **Start new registration** asks for confirmation before clearing the current details.
 - **Mobile usability and accessibility:** safe-area layout, scrollable content, keyboard-aware screen behavior, next-field keyboard navigation, and accessibility labels/states on interactive controls.
 
+## Responsive layout and platform decisions
+
+- **Orientation:** the app uses Expo's `default` orientation instead of locking to portrait, so the form can be used in portrait or landscape. iOS tablet support is enabled.
+- **Form width:** the registration form fills the available width on smaller screens, keeps 20 px of horizontal padding, and is centered with a maximum width of 640 px on larger screens. This keeps fields usable on phones without letting them become uncomfortably wide on tablets or desktop-sized windows. The form remains a single column so fields stay easy to follow at narrow widths.
+- **Keyboard handling:** the form scrolls when space is limited and adjusts for the keyboard using `padding` on iOS and `height` on other platforms.
+- **Date picker:** iOS uses an inline calendar with a **Done** button; Android uses the calendar picker and closes it after a date is selected. This follows each platform's native interaction style.
+
 ## Submission behavior
 
 Submission currently validates the form, shows a brief loading state, and displays the summary locally. It does not send data to a server or persist it after the app is closed.

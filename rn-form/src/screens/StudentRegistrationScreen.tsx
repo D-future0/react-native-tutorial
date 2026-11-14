@@ -10,16 +10,14 @@ import {
   View,
 } from "react-native";
 import type { TextInputInstance } from "react-native";
-
 import { SafeAreaView } from "react-native-safe-area-context";
-
+import ResponsiveContainer from "../components/ResponsiveContainer";
 import FormField from "../components/FormField";
 import DatePickerField from "../components/DatePickerField";
 import SelectField from "../components/SelectField";
 import SubmitButton from "../components/SubmitButton";
 import RegistrationSummaryScreen from "./RegistrationSummaryScreen";
 import { validateForm } from "../utils/validation";
-
 import type {
   ContactFormData,
   ContactFormErrors,
@@ -143,126 +141,128 @@ export default function StudentRegistrationScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
-            <Text style={styles.title}>Get in touch</Text>
+          <ResponsiveContainer maxWidth={640}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Student Registration Form</Text>
 
-            <Text style={styles.subtitle}>
-              Student Registration Form.
-            </Text>
-          </View>
+              <Text style={styles.subtitle}>
+                Fill the form below.
+              </Text>
+            </View>
 
-          <FormField
-            label="Student's full name"
-            value={form.fullName}
-            onChangeText={(value) =>
-              updateField("fullName", value)
-            }
-            placeholder="Enter your full name"
-            error={errors.fullName}
-            autoCapitalize="words"
-            onSubmitEditing={() => emailRef.current?.focus()}
-            returnKeyType="next"
-          />
+            <FormField
+              label="Student's full name"
+              value={form.fullName}
+              onChangeText={(value) =>
+                updateField("fullName", value)
+              }
+              placeholder="Enter your full name"
+              error={errors.fullName}
+              autoCapitalize="words"
+              onSubmitEditing={() => emailRef.current?.focus()}
+              returnKeyType="next"
+            />
 
-          <FormField
-            label="Email address"
-            value={form.email}
-            onChangeText={(value) =>
-              updateField("email", value)
-            }
-            placeholder="example@email.com"
-            error={errors.email}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            inputRef={emailRef}
-            onSubmitEditing={() => phoneRef.current?.focus()}
-            returnKeyType="next"
-          />
+            <FormField
+              label="Email address"
+              value={form.email}
+              onChangeText={(value) =>
+                updateField("email", value)
+              }
+              placeholder="example@email.com"
+              error={errors.email}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              inputRef={emailRef}
+              onSubmitEditing={() => phoneRef.current?.focus()}
+              returnKeyType="next"
+            />
 
-          <FormField
-            label="Phone number"
-            value={String(form.phone)}
-            onChangeText={(value) =>
-              updateField("phone", value)
-            }
-            placeholder="Enter your phone number"
-            error={errors.phone}
-            keyboardType="number-pad"
-            inputRef={phoneRef}
-            onSubmitEditing={() => parentNameRef.current?.focus()}
-            returnKeyType="next"
-          />
+            <FormField
+              label="Phone number"
+              value={String(form.phone)}
+              onChangeText={(value) =>
+                updateField("phone", value)
+              }
+              placeholder="Enter your phone number"
+              error={errors.phone}
+              keyboardType="number-pad"
+              inputRef={phoneRef}
+              onSubmitEditing={() => parentNameRef.current?.focus()}
+              returnKeyType="next"
+            />
 
-          <DatePickerField
-            label="Date of Birth"
-            value={parseDateOfBirth(form.dateOfBirth)}
-            onChange={(date) =>
-              updateField(
-                "dateOfBirth",
-                date ? formatDateOfBirth(date) : "",
-              )
-            }
-            placeholder="Select your date of birth"
-            error={errors.dateOfBirth}
-          />
-          <SelectField
-            label="Class"
-            value={form.class}
-            onChange={(value) =>
-              updateField("class", value)
-            }
-            options={classes}
-            placeholder="Select your class"
-            error={errors.class}
-          />
-          <FormField
-            label="Parent's Name"
-            value={form.parentName}
-            onChangeText={(value) =>
-              updateField("parentName", value)
-            }
-            placeholder="Enter your parent's name"
-            error={errors.parentName}
-            inputRef={parentNameRef}
-            onSubmitEditing={() => parentPhoneRef.current?.focus()}
-            returnKeyType="next"
-          />
-          <FormField
-            label="Parent's Phone Number"
-            value={form.parentPhone}
-            onChangeText={(value) =>
-              updateField("parentPhone", value)
-            }
-            placeholder="Enter your parent's phone number"
-            error={errors.parentPhone}
-            keyboardType="number-pad"
-            inputRef={parentPhoneRef}
-            onSubmitEditing={() => addressRef.current?.focus()}
-            returnKeyType="next"
-          />
-          <FormField
-            label="Address"
-            value={form.address}
-            onChangeText={(value) =>
-              updateField("address", value)
-            }
-            placeholder="Enter your address"
-            error={errors.address}
-            inputRef={addressRef}
-            onSubmitEditing={Keyboard.dismiss}
-            returnKeyType="done"
-            showCharacterCount
-          />
+            <DatePickerField
+              label="Date of Birth"
+              value={parseDateOfBirth(form.dateOfBirth)}
+              onChange={(date) =>
+                updateField(
+                  "dateOfBirth",
+                  date ? formatDateOfBirth(date) : "",
+                )
+              }
+              placeholder="Select your date of birth"
+              error={errors.dateOfBirth}
+            />
+            <SelectField
+              label="Class"
+              value={form.class}
+              onChange={(value) =>
+                updateField("class", value)
+              }
+              options={classes}
+              placeholder="Select your class"
+              error={errors.class}
+            />
+            <FormField
+              label="Parent's Name"
+              value={form.parentName}
+              onChangeText={(value) =>
+                updateField("parentName", value)
+              }
+              placeholder="Enter your parent's name"
+              error={errors.parentName}
+              inputRef={parentNameRef}
+              onSubmitEditing={() => parentPhoneRef.current?.focus()}
+              returnKeyType="next"
+            />
+            <FormField
+              label="Parent's Phone Number"
+              value={form.parentPhone}
+              onChangeText={(value) =>
+                updateField("parentPhone", value)
+              }
+              placeholder="Enter your parent's phone number"
+              error={errors.parentPhone}
+              keyboardType="number-pad"
+              inputRef={parentPhoneRef}
+              onSubmitEditing={() => addressRef.current?.focus()}
+              returnKeyType="next"
+            />
+            <FormField
+              label="Address"
+              value={form.address}
+              onChangeText={(value) =>
+                updateField("address", value)
+              }
+              placeholder="Enter your address"
+              error={errors.address}
+              inputRef={addressRef}
+              onSubmitEditing={Keyboard.dismiss}
+              returnKeyType="done"
+              showCharacterCount
+            />
 
-          {submitError ? (
-            <Text style={styles.submitError}>{submitError}</Text>
-          ) : null}
+            {submitError ? (
+              <Text style={styles.submitError}>{submitError}</Text>
+            ) : null}
 
-          <SubmitButton
-            onPress={handleSubmit}
-            isSubmitting={isSubmitting}
-          />
+            <SubmitButton
+              onPress={handleSubmit}
+              isSubmitting={isSubmitting}
+            />
+          </ResponsiveContainer>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -279,7 +279,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    padding: 20,
   },
   header: {
     marginBottom: 28,
