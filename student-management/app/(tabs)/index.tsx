@@ -8,7 +8,7 @@ export default function HomeScreen() {
   const numberOfClasses = new Set(
     students.map((student) => student.className),
   ).size;
-  const recentlyRegistered = students.slice(-1).reverse();
+  const recentlyRegistered = students.slice(-1);
 
   return (
     <ScrollView
