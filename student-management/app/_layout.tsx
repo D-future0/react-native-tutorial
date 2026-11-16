@@ -8,6 +8,14 @@ export default function RootLayout() {
         name="students/[id]"
         options={{ headerBackTitle: "Students" }}
       />
+      <Stack.Screen
+        name="students/[id]/edit"
+        options={{ headerBackTitle: "Student details" }}
+      />
+      <Stack.Screen
+        name="students/new"
+        options={{ headerBackTitle: "Students" }}
+      />
     </Stack>
   );
 }

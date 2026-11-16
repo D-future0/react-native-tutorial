@@ -16,7 +16,13 @@ app/
     students.tsx            Students tab (/students)
     settings.tsx            Settings tab (/settings)
   students/
+    new.tsx                 Register a student (/students/new)
     [id].tsx                Student details (/students/:id)
+    [id]/
+      edit.tsx              Edit a student (/students/:id/edit)
+src/
+  component/StudentForm.tsx Reusable create/edit form
+  store/studentStore.ts     Shared Zustand student state
 ```
 
 ### How navigation works
@@ -31,7 +37,22 @@ app/
   to `/students/<student-id>`, which matches `app/students/[id].tsx`.
 - Student details are pushed on the root stack above the tabs. The detail
   screen's back button is labeled “Students”.
+- The details screen links to `/students/<student-id>/edit`. The edit form
+  saves changed fields through `updateStudent` in the shared store and returns
+  to that student's details.
+- Both `/students/new` and `/students/<student-id>/edit` use
+  `StudentForm` for the shared fields and validation.
+- Student cards offer a confirmed delete action; deletions are saved with the
+  rest of the persisted student state.
 - Dashboard and student-card links use Expo Router's typed `Link` component.
   Dynamic student links provide the `[id]` parameter explicitly.
+- `useStudentStore` shares student state between the dashboard, list, and
+  detail screen. It persists student records with AsyncStorage, starts with the
+  mock data in `src/data/students.ts` when no saved records exist, and exposes
+  actions for adding, updating, and deleting records.
+- `useStudentHydrationStore` tracks the transient loading/error state separately
+  so hydration status is not written into the persisted student records.
+- Screens wait for the store to hydrate before rendering student data. If
+  loading saved records fails, the app logs the error and offers a retry.
 - The dashboard counts unique `className` values and treats the last student in
-  `src/data/students.ts` as the most recently registered one.
+  the store as the most recently registered one.

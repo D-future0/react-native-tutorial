@@ -2,13 +2,31 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Link } from "expo-router";
 import ScreenHeader from "../../src/component/ScreenHeader";
 import StudentCard from "../../src/component/StudentCard";
-import students from "../../src/data/students";
+import {
+  useStudentHydrationStore,
+  useStudentStore,
+} from "../../src/store/studentStore";
+import StudentStoreStatus from "../../src/component/StudentStoreStatus";
 
 export default function HomeScreen() {
+  const students = useStudentStore((state) => state.students);
+  const hasHydrated = useStudentHydrationStore((state) => state.hasHydrated);
+  const hydrationError = useStudentHydrationStore(
+    (state) => state.hydrationError,
+  );
   const numberOfClasses = new Set(
     students.map((student) => student.className),
   ).size;
-  const recentlyRegistered = students.slice(-1);
+  const recentlyRegistered = students.slice(-2).reverse();
+
+  if (!hasHydrated || hydrationError) {
+    return (
+      <StudentStoreStatus
+        hasHydrated={hasHydrated}
+        hydrationError={hydrationError}
+      />
+    );
+  }
 
   return (
     <ScrollView

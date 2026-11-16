@@ -1,20 +1,56 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
-import { StudentCardProps } from "../types/student";
+import { Alert, View, Text, Pressable, StyleSheet } from "react-native";
+import type { StudentCardProps } from "../types/student";
 import { Link } from "expo-router";
+import { useStudentStore } from "../store/studentStore";
 
 export default function StudentCard({ student }: StudentCardProps) {
+  const deleteStudent = useStudentStore((state) => state.deleteStudent);
+
+  const confirmDelete = () => {
+    Alert.alert(
+      "Delete student",
+      `Are you sure you want to delete ${student.fullName}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteStudent(student.id),
+        },
+      ],
+    );
+  };
+
   return (
     <View style={styles.card}>
       <Text style={styles.name}>{student.fullName}</Text>
       <Text style={styles.className}>{student.className}</Text>
-      <Link
-        href={{ pathname: "/students/[id]", params: { id: student.id } }}
-        asChild
-      >
-        <Pressable style={styles.button}>
-          <Text style={styles.buttonText}>View Details</Text>
+      <View style={styles.buttonContainer}>
+        <Link
+          href={{ pathname: "/students/[id]", params: { id: student.id } }}
+          asChild
+        >
+          <Pressable style={styles.button}>
+            <Text style={styles.buttonText}>View Details</Text>
+          </Pressable>
+        </Link>
+        <Link
+          href={{ pathname: "/students/[id]/edit", params: { id: student.id } }}
+          asChild
+        >
+          <Pressable style={styles.button}>
+            <Text style={styles.buttonText}>Edit Student</Text>
+          </Pressable>
+        </Link>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Delete ${student.fullName}`}
+          onPress={confirmDelete}
+          style={styles.deleteButton}
+        >
+          <Text style={styles.deleteButtonText}>Delete</Text>
         </Pressable>
-      </Link>
+      </View>
     </View>
   );
 }
@@ -37,15 +73,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 6,
   },
+  buttonContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 12,
+  },
   button: {
     alignSelf: "flex-start",
     backgroundColor: "#2563EB",
     borderRadius: 8,
-    marginTop: 14,
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
   buttonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  deleteButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "#DC2626",
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  deleteButtonText: {
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "600",
