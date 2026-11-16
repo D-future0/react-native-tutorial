@@ -1,20 +1,18 @@
-import { ScrollView, StyleSheet } from "react-native";
+import { FlatList, StyleSheet } from "react-native";
 import students from "../../src/data/students";
 import StudentCard from "../../src/component/StudentCard";
-import { Student } from "../../src/types/student";
 import ScreenHeader from "../../src/component/ScreenHeader";
 
 export default function StudentsScreen() {
   return (
-    <ScrollView
+    <FlatList
+      data={students}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => <StudentCard student={item} />}
+      ListHeaderComponent={<ScreenHeader title="Students" />}
       style={styles.container}
       contentContainerStyle={styles.content}
-    >
-      <ScreenHeader title="Students" />
-      {students.map((student: Student) => (
-        <StudentCard key={student.id} student={student} />
-      ))}
-    </ScrollView>
+    />
   );
 }
 

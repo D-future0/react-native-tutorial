@@ -1,18 +1,20 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { StudentCardProps } from "../types/student";
-import { router } from "expo-router";
+import { Link } from "expo-router";
 
 export default function StudentCard({ student }: StudentCardProps) {
   return (
     <View style={styles.card}>
       <Text style={styles.name}>{student.fullName}</Text>
       <Text style={styles.className}>{student.className}</Text>
-      <Pressable
-        style={styles.button}
-        onPress={() => router.push(`/students/${student.id}`)}
+      <Link
+        href={{ pathname: "/students/[id]", params: { id: student.id } }}
+        asChild
       >
-        <Text style={styles.buttonText}>View Details</Text>
-      </Pressable>
+        <Pressable style={styles.button}>
+          <Text style={styles.buttonText}>View Details</Text>
+        </Pressable>
+      </Link>
     </View>
   );
 }

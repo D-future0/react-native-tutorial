@@ -4,6 +4,8 @@
 
 The app uses Expo Router's file-based routing. The `main` entry in
 `package.json` is `expo-router/entry`, which loads the routes in `app/`.
+Typed routes are enabled in `app.json`; Expo CLI generates the route types
+under `.expo/types` when the development server starts.
 
 ```text
 app/
@@ -29,3 +31,7 @@ app/
   to `/students/<student-id>`, which matches `app/students/[id].tsx`.
 - Student details are pushed on the root stack above the tabs. The detail
   screen's back button is labeled “Students”.
+- Dashboard and student-card links use Expo Router's typed `Link` component.
+  Dynamic student links provide the `[id]` parameter explicitly.
+- The dashboard counts unique `className` values and treats the last student in
+  `src/data/students.ts` as the most recently registered one.
