@@ -5,10 +5,7 @@ import ScreenHeader from "../../src/component/ScreenHeader";
 export default function HomeScreen() {
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Dashboard" />
-      <Text style={styles.title}>
-        Student Management 
-      </Text>
+      <ScreenHeader title="Student Management " />
 
       <Pressable
         style={styles.button}
@@ -34,7 +31,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
     padding: 24,
     gap: 16,
   },
