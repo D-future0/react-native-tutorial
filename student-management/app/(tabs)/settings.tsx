@@ -16,7 +16,7 @@ export default function SettingsScreen() {
           <Text style={styles.optionText}>Enable Notifications</Text>
         </View>
         <View style={styles.option}>
-          <Text style={styles.optionText}>Dark Mode</Text>
+          <Text style={styles.optionText}>Theme Switcher</Text>
         </View>
         <View style={styles.option}>
           <Text style={styles.optionText}>Language Preferences</Text>
