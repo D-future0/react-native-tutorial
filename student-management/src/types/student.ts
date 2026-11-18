@@ -1,9 +1,6 @@
-export type Student = {
-  id: string;
-  fullName: string;
-  email: string;
-  className: string;
-};
+import type { Student } from "../schemas/student";
+
+export type { Student } from "../schemas/student";
 
 export interface StudentCardProps {
   student: Student;

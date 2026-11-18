@@ -1,8 +1,9 @@
 
-import { FlatList, StyleSheet, Text, Pressable } from "react-native";
+import { FlatList, StyleSheet, Text, Pressable, View } from "react-native";
 import { Link } from "expo-router";
 import StudentCard from "../../src/component/StudentCard";
 import ScreenHeader from "../../src/component/ScreenHeader";
+import StudentPersistenceNotice from "../../src/component/StudentPersistenceNotice";
 import {
   useStudentHydrationStore,
   useStudentStore,
@@ -26,32 +27,31 @@ export default function StudentsScreen() {
   }
 
   return (
-    <>
     <FlatList
       data={students}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <StudentCard student={item} />
-      )}
+      renderItem={({ item }) => <StudentCard student={item} />}
       ListHeaderComponent={
-        <ScreenHeader title="Students" />
+        <View>
+          <ScreenHeader title="Students" />
+          <StudentPersistenceNotice />
+        </View>
       }
       ListEmptyComponent={
         <Text style={styles.empty}>
           No students registered yet.
         </Text>
       }
+      ListFooterComponent={
+        <Link href="/students/new" asChild>
+          <Pressable style={styles.button}>
+            <Text style={styles.buttonText}>Add New Student</Text>
+          </Pressable>
+        </Link>
+      }
       style={styles.container}
       contentContainerStyle={styles.content}
     />
-    <Link href="/students/new" asChild>
-  <Pressable style={styles.button}>
-    <Text style={styles.buttonText}>
-      Add New Student
-    </Text>
-  </Pressable>
-</Link>
- </>
   );
 }
 

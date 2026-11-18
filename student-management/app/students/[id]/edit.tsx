@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import ScreenHeader from "../../../src/component/ScreenHeader";
 import StudentForm from "../../../src/component/StudentForm";
+import StudentPersistenceNotice from "../../../src/component/StudentPersistenceNotice";
 import StudentStoreStatus from "../../../src/component/StudentStoreStatus";
 import {
   useStudentHydrationStore,
@@ -40,12 +41,13 @@ export default function UpdateStudentScreen() {
   return (
     <View style={styles.container}>
       <ScreenHeader title="Update Student" />
+      <StudentPersistenceNotice />
       <StudentForm
         key={student.id}
         initialStudent={student}
         submitLabel="Save Changes"
-        onSubmit={(values) => {
-          updateStudent(student.id, values);
+        onSubmit={async (values) => {
+          await updateStudent(student.id, values);
           router.replace({
             pathname: "/students/[id]",
             params: { id: student.id },

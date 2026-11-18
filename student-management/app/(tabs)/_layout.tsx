@@ -14,6 +14,11 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="directory"
+        options={{ title: "Directory" }}
+      />
+      
+      <Tabs.Screen
         name="settings"
         options={{ title: "Settings" }}
       />

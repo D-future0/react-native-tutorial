@@ -7,14 +7,15 @@ import {
   TextInput,
   View,
 } from "react-native";
-import type { Student } from "../types/student";
-
-export type StudentFormValues = Omit<Student, "id">;
+import {
+  studentFormSchema,
+  type StudentFormValues,
+} from "../schemas/student";
 
 type StudentFormProps = {
   initialStudent?: StudentFormValues;
   submitLabel: string;
-  onSubmit: (values: StudentFormValues) => void;
+  onSubmit: (values: StudentFormValues) => Promise<void>;
 };
 
 export default function StudentForm({
@@ -34,19 +35,22 @@ export default function StudentForm({
     setClassName(initialStudent?.className ?? "");
   }, [initialStudent]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (isSubmittingRef.current) {
       return;
     }
 
-    const values = {
-      fullName: fullName.trim(),
-      email: email.trim(),
-      className: className.trim(),
-    };
+    const result = studentFormSchema.safeParse({
+      fullName,
+      email,
+      className,
+    });
 
-    if (!values.fullName || !values.email || !values.className) {
-      Alert.alert("Validation", "Please complete all fields.");
+    if (!result.success) {
+      Alert.alert(
+        "Validation",
+        result.error.issues[0]?.message ?? "Check the form fields.",
+      );
       return;
     }
 
@@ -54,10 +58,13 @@ export default function StudentForm({
     setIsSubmitting(true);
 
     try {
-      onSubmit(values);
+      await onSubmit(result.data);
     } catch (error) {
       console.error("Failed to save student:", error);
-      Alert.alert("Save failed", "The student could not be saved. Please try again.");
+      Alert.alert(
+        "Save failed",
+        "The student could not be saved. Please try again.",
+      );
       isSubmittingRef.current = false;
       setIsSubmitting(false);
     }

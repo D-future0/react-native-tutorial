@@ -4,8 +4,10 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@tanstack/react-query": "^5.108.0",
     "expo": "58.0.23",
     "expo-asset": "~58.0.20",
+    "expo-crypto": "~58.0.8",
     "expo-router": "~58.0.31",
     "expo-splash-screen": "~58.0.13",
     "expo-status-bar": "~58.0.4",
@@ -13,6 +15,8 @@
     "react-dom": "19.3.0",
     "react-native": "0.88.1",
     "react-native-safe-area-context": "~5.11.1",
+    "react-native-web": "^0.21.4",
+    "zod": "^4.6.7",
     "zustand": "^5.1.0"
   },
   "devDependencies": {

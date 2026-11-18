@@ -7,6 +7,7 @@ import {
   useStudentStore,
 } from "../../src/store/studentStore";
 import StudentStoreStatus from "../../src/component/StudentStoreStatus";
+import StudentPersistenceNotice from "../../src/component/StudentPersistenceNotice";
 
 export default function HomeScreen() {
   const students = useStudentStore((state) => state.students);
@@ -34,6 +35,7 @@ export default function HomeScreen() {
       contentContainerStyle={styles.content}
     >
       <ScreenHeader title="Student Management" />
+      <StudentPersistenceNotice />
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>Total Students</Text>

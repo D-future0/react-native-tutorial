@@ -1,10 +1,30 @@
 import { Alert, View, Text, Pressable, StyleSheet } from "react-native";
+import { useRef } from "react";
 import type { StudentCardProps } from "../types/student";
 import { Link } from "expo-router";
 import { useStudentStore } from "../store/studentStore";
 
 export default function StudentCard({ student }: StudentCardProps) {
   const deleteStudent = useStudentStore((state) => state.deleteStudent);
+  const isDeleting = useRef(false);
+
+  const deleteConfirmed = async () => {
+    if (isDeleting.current) {
+      return;
+    }
+
+    isDeleting.current = true;
+    try {
+      await deleteStudent(student.id);
+    } catch {
+      Alert.alert(
+        "Delete failed",
+        "The student could not be deleted. Please try again.",
+      );
+    } finally {
+      isDeleting.current = false;
+    }
+  };
 
   const confirmDelete = () => {
     Alert.alert(
@@ -15,7 +35,7 @@ export default function StudentCard({ student }: StudentCardProps) {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => deleteStudent(student.id),
+          onPress: () => void deleteConfirmed(),
         },
       ],
     );

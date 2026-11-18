@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import {
+  hydrateStudentStore,
   useStudentHydrationStore,
-  useStudentStore,
 } from "../store/studentStore";
 
 type StudentStoreStatusProps = {
@@ -22,7 +22,7 @@ export default function StudentStoreStatus({
       hasHydrated: false,
       hydrationError: null,
     });
-    void useStudentStore.persist.rehydrate();
+    void hydrateStudentStore();
   };
 
   return (

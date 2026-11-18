@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { View, StyleSheet } from "react-native";
 import ScreenHeader from "../../src/component/ScreenHeader";
 import StudentForm from "../../src/component/StudentForm";
+import StudentPersistenceNotice from "../../src/component/StudentPersistenceNotice";
 import StudentStoreStatus from "../../src/component/StudentStoreStatus";
 import {
   useStudentHydrationStore,
@@ -27,10 +28,11 @@ export default function NewStudentScreen() {
   return (
     <View style={styles.container}>
       <ScreenHeader title="Register Student" />
+      <StudentPersistenceNotice />
       <StudentForm
         submitLabel="Register Student"
-        onSubmit={(values) => {
-          addStudent(values);
+        onSubmit={async (values) => {
+          await addStudent(values);
           router.replace("/students");
         }}
       />
