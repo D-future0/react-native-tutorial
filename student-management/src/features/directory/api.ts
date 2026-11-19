@@ -1,18 +1,34 @@
 
+import type { z } from "zod";
 import type {
   RemoteStudent,
   RemoteStudentsResponse,
   NewRemoteStudent,
 } from "./types";
-import { REMOTE_STUDENTS_PAGE_SIZE } from "./types";
+import {
+  REMOTE_STUDENTS_PAGE_SIZE,
+  remoteStudentSchema,
+  remoteStudentsResponseSchema,
+} from "./types";
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ?? "https://dummyjson.com";
 
+function apiRequest<T>(
+  path: string,
+  schema: z.ZodType<T>,
+  init?: RequestInit,
+): Promise<T>;
+function apiRequest(
+  path: string,
+  schema: null,
+  init?: RequestInit,
+): Promise<void>;
 async function apiRequest<T>(
   path: string,
+  schema: z.ZodType<T> | null,
   init: RequestInit = {}
-): Promise<T> {
+): Promise<T | void> {
   const response = await fetch(
     `${API_BASE_URL}${path}`,
     {
@@ -33,7 +49,20 @@ async function apiRequest<T>(
     );
   }
 
-  return (await response.json()) as T;
+  if (response.status === 204) {
+    if (schema) {
+      throw new Error("Expected a JSON response but received HTTP 204.");
+    }
+
+    return;
+  }
+
+  if (schema === null) {
+    return;
+  }
+
+  const payload: unknown = await response.json();
+  return schema.parse(payload);
 }
 
 export function fetchRemoteStudents(
@@ -50,6 +79,7 @@ export function fetchRemoteStudents(
 
   return apiRequest<RemoteStudentsResponse>(
     query,
+    remoteStudentsResponseSchema,
     { signal }
   );
 }
@@ -60,6 +90,7 @@ export function fetchStudentById(
 ): Promise<RemoteStudent> {
   return apiRequest<RemoteStudent>(
     `/users/${studentId}?select=id,firstName,lastName,email,university`,
+    remoteStudentSchema,
     { signal }
   );
 }
@@ -69,6 +100,7 @@ export function createRemoteStudent(
 ): Promise<RemoteStudent> {
   return apiRequest<RemoteStudent>(
     "/users/add",
+    remoteStudentSchema,
     {
       method: "POST",
       body: JSON.stringify(student),
@@ -82,8 +114,9 @@ export function editRemoteStudent(
 ): Promise<RemoteStudent> {
   return apiRequest<RemoteStudent>(
     `/users/${studentId}`,
+    remoteStudentSchema,
     {
-      method: "PUT",
+      method: "PATCH",
       body: JSON.stringify(student),
     }
   );
@@ -92,8 +125,9 @@ export function editRemoteStudent(
 export function deleteRemoteStudent(
   studentId: number
 ): Promise<void> {
-  return apiRequest<void>(
+  return apiRequest(
     `/users/${studentId}`,
+    null,
     { method: "DELETE" }
   );
 }
