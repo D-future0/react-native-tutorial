@@ -1,6 +1,5 @@
 
 import {
-  Alert,
   ActivityIndicator,
   FlatList,
   RefreshControl,
@@ -10,29 +9,21 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   useRemoteStudents,
   useCreateRemoteStudent,
-  useDeleteRemoteStudent,
 } from "../../src/features/directory/queries";
 import { Link } from "expo-router";
-import {
-  REMOTE_STUDENTS_PAGE_SIZE,
-  type RemoteStudent,
-} from "../../src/features/directory/types";
 
 export default function DirectoryScreen() {
-  const listRef = useRef<FlatList<RemoteStudent>>(null);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [page, setPage] = useState(1);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
       setDebouncedSearchTerm(searchText.trim());
-      setPage(1);
     }, 400);
 
     return () => clearTimeout(timeout);
@@ -43,26 +34,9 @@ export default function DirectoryScreen() {
     error,
     isPending,
     isError,
-    isFetching,
-    isPlaceholderData,
     isRefetching,
     refetch,
-  } = useRemoteStudents(debouncedSearchTerm, page);
-  const pageSize = data?.limit ?? REMOTE_STUDENTS_PAGE_SIZE;
-  const total = data?.total ?? 0;
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const firstItem = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const lastItem = Math.min(page * pageSize, total);
-
-  useEffect(() => {
-    if (data && page > pageCount) {
-      setPage(pageCount);
-    }
-  }, [data, page, pageCount]);
-
-  useEffect(() => {
-    listRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [page, debouncedSearchTerm]);
+  } = useRemoteStudents(debouncedSearchTerm);
 
   const createMutation = useCreateRemoteStudent();
 
@@ -121,7 +95,6 @@ export default function DirectoryScreen() {
       )}
 
       <FlatList
-        ref={listRef}
         data={data?.users ?? []}
         keyExtractor={(item) => String(item.id)}
         refreshControl={
@@ -131,7 +104,31 @@ export default function DirectoryScreen() {
           />
         }
         renderItem={({ item }) => (
-          <RemoteStudentCard student={item} />
+          <View style={styles.card}>
+            <Text style={styles.name}>
+              {item.firstName} {item.lastName}
+            </Text>
+
+            <Text style={styles.email}>
+              {item.email}
+            </Text>
+
+            <Text style={styles.university}>
+              {item.university ?? "Institution unavailable"}
+            </Text>
+
+            <Link
+              href={{
+                pathname: "/directory/[id]",
+                params: { id: String(item.id) },
+              }}
+              asChild
+            >
+              <Pressable style={styles.button}>
+                <Text style={styles.buttonText}>View Details</Text>
+              </Pressable>
+            </Link>
+          </View>
         )}
         ListEmptyComponent={
           isPending ? (
@@ -159,126 +156,6 @@ export default function DirectoryScreen() {
         }
         contentContainerStyle={styles.list}
       />
-
-      <View style={styles.pagination}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Previous page"
-          accessibilityState={{ disabled: page <= 1 || isFetching }}
-          disabled={page <= 1 || isFetching}
-          onPress={() => setPage((currentPage) => currentPage - 1)}
-          style={[
-            styles.pageButton,
-            (page <= 1 || isFetching) && styles.disabled,
-          ]}
-        >
-          <Text style={styles.buttonText}>Previous</Text>
-        </Pressable>
-
-        <Text style={styles.pageText}>
-          {isPlaceholderData
-            ? "Loading page..."
-            : total === 0
-            ? "No students"
-            : `${firstItem}-${lastItem} of ${total}`}
-          {"\n"}Page {page} of {pageCount}
-        </Text>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Next page"
-          accessibilityState={{ disabled: page >= pageCount || isFetching }}
-          disabled={page >= pageCount || isFetching}
-          onPress={() => setPage((currentPage) => currentPage + 1)}
-          style={[
-            styles.pageButton,
-            (page >= pageCount || isFetching) && styles.disabled,
-          ]}
-        >
-          <Text style={styles.buttonText}>Next</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-function RemoteStudentCard({ student }: { student: RemoteStudent }) {
-  const deleteMutation = useDeleteRemoteStudent(student);
-
-  const confirmDelete = () => {
-    Alert.alert(
-      "Delete student",
-      `Are you sure you want to delete ${student.firstName} ${student.lastName}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => deleteMutation.mutate(),
-        },
-      ]
-    );
-  };
-
-  return (
-    <View style={styles.card}>
-      <Text style={styles.name}>
-        {student.firstName} {student.lastName}
-      </Text>
-
-      <Text style={styles.email}>{student.email}</Text>
-
-      <Text style={styles.university}>
-        {student.university ?? "Institution unavailable"}
-      </Text>
-
-      {deleteMutation.isError && (
-        <Text style={styles.error}>
-          {deleteMutation.error.message}
-        </Text>
-      )}
-
-      <View style={styles.actions}>
-        <Link
-          href={{
-            pathname: "/directory/[id]",
-            params: { id: String(student.id) },
-          }}
-          asChild
-        >
-          <Pressable style={styles.button}>
-            <Text style={styles.buttonText}>View Details</Text>
-          </Pressable>
-        </Link>
-
-        <Link
-          href={{
-            pathname: "/directory/[id]/edit",
-            params: { id: String(student.id) },
-          }}
-          asChild
-        >
-          <Pressable style={styles.editButton}>
-            <Text style={styles.buttonText}>Edit</Text>
-          </Pressable>
-        </Link>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Delete ${student.firstName} ${student.lastName}`}
-          accessibilityState={{ disabled: deleteMutation.isPending }}
-          disabled={deleteMutation.isPending}
-          onPress={confirmDelete}
-          style={[
-            styles.deleteButton,
-            deleteMutation.isPending && styles.disabled,
-          ]}
-        >
-          <Text style={styles.buttonText}>
-            {deleteMutation.isPending ? "Deleting..." : "Delete"}
-          </Text>
-        </Pressable>
-      </View>
     </View>
   );
 }
@@ -349,26 +226,6 @@ const styles = StyleSheet.create({
     color: "#2563EB",
     fontSize: 13,
   },
-  actions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 8,
-  },
-  editButton: {
-    backgroundColor: "#475569",
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  deleteButton: {
-    backgroundColor: "#DC2626",
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 16,
-  },
   error: {
     color: "#DC2626",
     textAlign: "center",
@@ -380,21 +237,5 @@ const styles = StyleSheet.create({
   list: {
     gap: 12,
     paddingBottom: 24,
-  },
-  pagination: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: 12,
-  },
-  pageButton: {
-    backgroundColor: "#2563EB",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  pageText: {
-    color: "#475569",
-    textAlign: "center",
   },
 });
