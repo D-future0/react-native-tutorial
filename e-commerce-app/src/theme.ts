@@ -20,9 +20,9 @@ export const theme = {
   },
 };
 
-export function formatPrice(price: number): string {
+export function formatPrice(priceCents: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-  }).format(price);
+  }).format(priceCents / 100);
 }

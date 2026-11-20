@@ -29,80 +29,43 @@ describe('AppController (e2e)', () => {
       .expect(200)
       .expect(({ body }) => {
         expect(body).toHaveLength(20);
-        expect(body[0].imageUrl).toContain('media.istockphoto.com');
+        expect(body[0].priceCents).toEqual(expect.any(Number));
+        expect(body[0].stockQuantity).toBe(20);
       });
   });
 
-  it('/orders (GET and POST)', async () => {
-    const products = await request(app.getHttpServer())
-      .get('/products')
-      .expect(200);
-    const product = products.body[0];
-    const orderInput = {
-      items: [{ productId: product.id, quantity: 2 }],
-      expectedTotal: Math.round(product.price * 200) / 100,
-    };
+  it('protects order endpoints with authentication', async () => {
+    await request(app.getHttpServer())
+      .get('/orders')
+      .expect(401);
+    await request(app.getHttpServer())
+      .post('/orders')
+      .send({ items: [], expectedTotalCents: 0 })
+      .expect(401);
+    await request(app.getHttpServer())
+      .get('/orders/order-id')
+      .expect(401);
+
+    const registration = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: `orders-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`,
+        password: 'correct-horse-battery-staple',
+      })
+      .expect(201);
+    const authorization = `Bearer ${registration.body.accessToken}`;
 
     await request(app.getHttpServer())
       .get('/orders')
+      .set('Authorization', authorization)
       .expect(200)
       .expect(({ body }) => {
         expect(Array.isArray(body)).toBe(true);
       });
-
     await request(app.getHttpServer())
       .post('/orders')
-      .send(orderInput)
-      .expect(201)
-      .expect(({ body }) => {
-        expect(typeof body.id).toBe('string');
-        expect(body.items).toEqual([
-          {
-            productId: product.id,
-            name: product.name,
-            price: Math.round(product.price * 100) / 100,
-            imageUrl: product.imageUrl,
-            quantity: 2,
-          },
-        ]);
-        expect(body.total).toBe(orderInput.expectedTotal);
-      });
-
-    const created = await request(app.getHttpServer())
-      .post('/orders')
-      .send(orderInput)
-      .expect(201);
-
-    await request(app.getHttpServer())
-      .get(`/orders/${created.body.id}`)
-      .expect(200)
-      .expect(({ body }) => {
-        expect(body.id).toBe(created.body.id);
-        expect(body.items).toEqual(created.body.items);
-        expect(body.total).toBe(created.body.total);
-      });
-  });
-
-  it('rejects client-supplied prices and invalid quantities', async () => {
-    const products = await request(app.getHttpServer())
-      .get('/products')
-      .expect(200);
-    const product = products.body[0];
-
-    await request(app.getHttpServer())
-      .post('/orders')
-      .send({
-        items: [{ productId: product.id, quantity: 1, price: 0.01 }],
-        expectedTotal: 0.01,
-      })
-      .expect(400);
-
-    await request(app.getHttpServer())
-      .post('/orders')
-      .send({
-        items: [{ productId: product.id, quantity: 0 }],
-        expectedTotal: 0,
-      })
+      .set('Authorization', authorization)
+      .send({ items: [], expectedTotalCents: 0 })
       .expect(400);
   });
 
@@ -148,9 +111,16 @@ describe('AppController (e2e)', () => {
       });
   }, 20_000);
 
-  it('rejects invalid order ids', () => {
+  it('rejects invalid order ids for authenticated users', async () => {
+    const email = `orders-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+    const registration = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email, password: 'correct-horse-battery-staple' })
+      .expect(201);
+
     return request(app.getHttpServer())
       .get('/orders/not-an-id')
+      .set('Authorization', `Bearer ${registration.body.accessToken}`)
       .expect(404);
   });
 

@@ -56,8 +56,9 @@ pnpm exec prisma migrate dev
 pnpm exec prisma db seed
 ```
 
-The seed script replaces the current product catalog with 20 sample products.
-It does not seed users or orders.
+The seed script replaces the current product catalog with 20 sample products,
+priced in integer USD cents with 20 units of starting stock each. It does not
+seed users or orders.
 
 ## Run
 
@@ -83,8 +84,8 @@ pnpm run start:prod
 | `GET` | `/products` | List products |
 | `GET` | `/products/:id` | Get a product by ID |
 
-Product records include `id`, `name`, `description`, `price`, `imageUrl`,
-`createdAt`, and `updatedAt`.
+Product records include `id`, `name`, `description`, `priceCents`,
+`stockQuantity`, `imageUrl`, `createdAt`, and `updatedAt`.
 
 ### Orders
 
@@ -94,17 +95,20 @@ Product records include `id`, `name`, `description`, `price`, `imageUrl`,
 | `POST` | `/orders` | Create an order |
 | `GET` | `/orders/:id` | Get an order by ID |
 
-Create an order by sending product IDs, positive integer quantities, and the
-current cart total. Product names, images, and prices are loaded from the
-database; client-supplied price fields are rejected. The backend rounds unit
-prices to cents, stores a price snapshot and total, and returns `409 Conflict`
-if the expected total no longer matches current prices or a product is
-unavailable. Review the refreshed cart and submit again after a conflict.
+All order endpoints require `Authorization: Bearer <accessToken>` and only
+return orders belonging to that user. Orders created before user ownership was
+added remain unassigned and are not exposed through these endpoints. Create an order by sending product IDs,
+positive integer quantities, and the expected total in cents. Product names,
+images, and prices are loaded from the database; client-supplied price fields
+are rejected. The backend calculates the total in integer cents and atomically
+decrements inventory with the order insert. It returns `409 Conflict` if stock
+or the expected total changed. Review the refreshed cart and submit again after
+a conflict.
 
 ```json
 {
   "items": [{ "productId": "product-id", "quantity": 1 }],
-  "expectedTotal": 29.99
+  "expectedTotalCents": 2999
 }
 ```
 
@@ -128,10 +132,10 @@ Registration and login accept:
 Passwords must be at least 8 characters and are stored as bcrypt hashes.
 Registration normalizes email casing; an existing email returns `409 Conflict`.
 Successful registration and login return an `accessToken`. Send it as
-`Authorization: Bearer <accessToken>` to access `/auth/me`.
+`Authorization: Bearer <accessToken>` to access `/auth/me` and the order endpoints.
 
-The products and orders endpoints are currently public; only `/auth/me`
-requires authentication.
+Product endpoints are public; order endpoints and `/auth/me` require
+authentication.
 
 ## Tests
 

@@ -79,6 +79,7 @@ export default function ProfileScreen() {
       await removeSessionToken();
       setAccessToken(null);
       queryClient.removeQueries({ queryKey: ['auth', 'me'] });
+      queryClient.removeQueries({ queryKey: ['orders'] });
     } catch (error) {
       setFormError(
         error instanceof Error ? error.message : 'Could not sign out right now.',
@@ -105,7 +106,7 @@ export default function ProfileScreen() {
         <View style={styles.welcomeCard}>
           <Text style={styles.welcomeTitle}>Keep the good things close.</Text>
           <Text style={styles.welcomeCopy}>
-            Sign in to your account, or browse your orders any time.
+            Sign in to your account to place an order and view your order history.
           </Text>
           <Pressable
             accessibilityRole="button"

@@ -9,11 +9,66 @@ interface CartStore {
   refreshError: string | null;
   setHydrated: (isHydrated: boolean) => void;
   setRefreshError: (error: string | null) => void;
-  addItem: (product: Product) => void;
+  addItem: (product: Product) => boolean;
   syncProducts: (products: Product[]) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function migrateCartItems(value: unknown): CartLine[] {
+  if (!isRecord(value) || !Array.isArray(value.items)) {
+    return [];
+  }
+
+  return value.items
+    .map((item): CartLine | null => {
+      if (!isRecord(item)) {
+        return null;
+      }
+
+      const priceCents =
+        typeof item.priceCents === 'number'
+          ? item.priceCents
+          : typeof item.price === 'number' && Number.isFinite(item.price)
+            ? Math.round(item.price * 100)
+            : null;
+
+      if (
+        typeof item.productId !== 'string' ||
+        typeof item.name !== 'string' ||
+        typeof item.imageUrl !== 'string' ||
+        typeof item.quantity !== 'number' ||
+        !Number.isSafeInteger(item.quantity) ||
+        item.quantity < 1 ||
+        priceCents === null ||
+        !Number.isSafeInteger(priceCents) ||
+        priceCents < 0
+      ) {
+        return null;
+      }
+
+      return {
+        productId: item.productId,
+        name: item.name,
+        imageUrl: item.imageUrl,
+        quantity: item.quantity,
+        priceCents,
+        available:
+          typeof item.available === 'boolean' ? item.available : undefined,
+        stockQuantity:
+          typeof item.stockQuantity === 'number' &&
+          Number.isSafeInteger(item.stockQuantity) &&
+          item.stockQuantity >= 0
+            ? item.stockQuantity
+            : undefined,
+      };
+    })
+    .filter((item): item is CartLine => item !== null);
 }
 
 export const useCartStore = create<CartStore>()(
@@ -24,11 +79,19 @@ export const useCartStore = create<CartStore>()(
       refreshError: null,
       setHydrated: (isHydrated) => set({ isHydrated }),
       setRefreshError: (refreshError) => set({ refreshError }),
-      addItem: (product) =>
+      addItem: (product) => {
+        let added = false;
         set((state) => {
           const existing = state.items.find(
             (item) => item.productId === product.id,
           );
+          if (
+            product.stockQuantity <= 0 ||
+            (existing && existing.quantity >= product.stockQuantity)
+          ) {
+            return state;
+          }
+          added = true;
           if (existing) {
             return {
               items: state.items.map((item) =>
@@ -36,9 +99,10 @@ export const useCartStore = create<CartStore>()(
                   ? {
                       ...item,
                       name: product.name,
-                      price: product.price,
+                      priceCents: product.priceCents,
                       imageUrl: product.imageUrl,
                       quantity: item.quantity + 1,
+                      stockQuantity: product.stockQuantity,
                       available: true,
                     }
                   : item,
@@ -53,15 +117,18 @@ export const useCartStore = create<CartStore>()(
               {
                 productId: product.id,
                 name: product.name,
-                price: product.price,
+                priceCents: product.priceCents,
                 imageUrl: product.imageUrl,
                 quantity: 1,
                 available: true,
+                stockQuantity: product.stockQuantity,
               },
             ],
             refreshError: null,
           };
-        }),
+        });
+        return added;
+      },
       syncProducts: (products) =>
         set((state) => {
           const productsById = new Map(
@@ -74,9 +141,10 @@ export const useCartStore = create<CartStore>()(
                 ? {
                     ...item,
                     name: product.name,
-                    price: product.price,
+                    priceCents: product.priceCents,
                     imageUrl: product.imageUrl,
-                    available: true,
+                    stockQuantity: product.stockQuantity,
+                    available: product.stockQuantity > 0,
                   }
                 : { ...item, available: false };
             }),
@@ -91,18 +159,28 @@ export const useCartStore = create<CartStore>()(
           items:
             quantity < 1
               ? state.items.filter((item) => item.productId !== productId)
-              : state.items.map((item) =>
-                  item.productId === productId
-                    ? { ...item, quantity: Math.floor(quantity) }
-                    : item,
-                ),
+              : state.items.map((item) => {
+                  if (item.productId !== productId) {
+                    return item;
+                  }
+                  const requested = Math.max(1, Math.floor(quantity));
+                  const capped =
+                    item.stockQuantity && item.stockQuantity > 0
+                      ? Math.min(requested, item.stockQuantity)
+                      : requested;
+                  return { ...item, quantity: capped };
+                }),
         })),
       clearCart: () => set({ items: [], refreshError: null }),
     }),
     {
       name: 'ecommerce-cart-v1',
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ items: state.items }),
+      migrate: (persistedState) => ({
+        items: migrateCartItems(persistedState),
+      }),
       onRehydrateStorage: () => (state) => state?.setHydrated(true),
     },
   ),

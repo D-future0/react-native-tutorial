@@ -29,8 +29,11 @@ that app origin (for example, `http://192.168.100.67:8081`) to the backend's
 ## App features
 
 - Discover, search, and filter products, with individual product details.
-- Persist a shopping bag on the device.
-- Submit and review demo orders; checkout does not process payments.
+- Persist a shopping bag on the device and refresh prices and stock in the
+  background.
+- Submit orders with server-validated prices and inventory; checkout does not
+  process payments.
+- View only orders associated with the signed-in account.
 - Register and sign in with the backend. Access tokens use SecureStore on
   Android/iOS and browser storage on web.
 

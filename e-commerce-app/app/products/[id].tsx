@@ -20,11 +20,21 @@ import { formatPrice, theme } from '../../src/theme';
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const productId = Array.isArray(id) ? id[0] : id;
-  const { data: product, isLoading, isError, error, refetch } = useProduct(productId ?? '');
+  const {
+    data: product,
+    isLoading,
+    isRefetchError,
+    error,
+    refetch,
+  } = useProduct(productId ?? '');
   const addItem = useCartStore((state) => state.addItem);
+  const quantityInCart = useCartStore(
+    (state) =>
+      state.items.find((item) => item.productId === productId)?.quantity ?? 0,
+  );
   const { isAdded, showAdded } = useAddedFeedback();
 
-  if (isLoading) {
+  if (isLoading && !product) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <LoadingState label="Opening this find…" />
@@ -32,7 +42,7 @@ export default function ProductDetailScreen() {
     );
   }
 
-  if (isError || !product) {
+  if (!product) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.backRow}>
@@ -49,9 +59,13 @@ export default function ProductDetailScreen() {
   }
 
   function handleAdd(productToAdd: Product) {
-    addItem(productToAdd);
-    showAdded();
+    if (addItem(productToAdd)) {
+      showAdded();
+    }
   }
+
+  const outOfStock = product.stockQuantity <= 0;
+  const stockLimitReached = quantityInCart >= product.stockQuantity;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -76,11 +90,24 @@ export default function ProductDetailScreen() {
         <Text style={styles.eyebrow}>THE GOOD STUFF</Text>
         <View style={styles.titleRow}>
           <Text style={styles.title}>{product.name}</Text>
-          <Text style={styles.price}>{formatPrice(product.price)}</Text>
+          <Text style={styles.price}>{formatPrice(product.priceCents)}</Text>
         </View>
         <Text style={styles.description}>
           {product.description ?? 'Thoughtfully chosen for everyday use and made to be kept.'}
         </Text>
+        <Text style={styles.stock}>
+          {outOfStock ? 'Out of stock' : `${product.stockQuantity} available`}
+        </Text>
+        {isRefetchError ? (
+          <View style={styles.refreshWarning}>
+            <Text style={styles.refreshText}>
+              Couldn’t refresh this product. Showing the last loaded details.
+            </Text>
+            <Pressable onPress={() => void refetch()} accessibilityRole="button">
+              <Text style={styles.retryText}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : null}
         <View style={styles.detailCard}>
           <Text style={styles.detailTitle}>Good things, considered</Text>
           <Text style={styles.detailCopy}>
@@ -91,12 +118,21 @@ export default function ProductDetailScreen() {
       </ScrollView>
       <View style={styles.footer}>
         <Button
-          title={isAdded ? 'Added to bag ✓' : 'Add to bag'}
+          title={
+            isAdded
+              ? 'Added to bag ✓'
+              : outOfStock
+                ? 'Out of stock'
+                : stockLimitReached
+                  ? 'Stock limit reached'
+                  : 'Add to bag'
+          }
           accessibilityLabel={
             isAdded ? `${product.name} added to bag` : `Add ${product.name} to bag`
           }
           accessibilityLiveRegion="polite"
           onPress={() => handleAdd(product)}
+          disabled={outOfStock || stockLimitReached}
           style={styles.addButton}
         />
         <Pressable
@@ -148,6 +184,18 @@ const styles = StyleSheet.create({
   title: { flex: 1, color: theme.colors.ink, fontSize: 27, fontWeight: '700', letterSpacing: -0.8 },
   price: { paddingTop: 5, color: theme.colors.primary, fontSize: 18, fontWeight: '800' },
   description: { marginTop: 14, color: theme.colors.muted, fontSize: 15, lineHeight: 23 },
+  stock: { marginTop: 10, color: theme.colors.primary, fontSize: 12, fontWeight: '700' },
+  refreshWarning: {
+    marginTop: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: theme.radius.small,
+    backgroundColor: '#EFEEE7',
+  },
+  refreshText: { flex: 1, color: theme.colors.muted, fontSize: 12, lineHeight: 18 },
+  retryText: { color: theme.colors.primary, fontSize: 12, fontWeight: '700' },
   detailCard: {
     marginTop: 22,
     padding: 18,

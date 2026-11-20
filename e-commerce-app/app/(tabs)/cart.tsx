@@ -23,15 +23,19 @@ export default function CartScreen() {
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
   const refreshError = useCartStore((state) => state.refreshError);
-  const hasUnavailableItems = items.some((item) => item.available === false);
+  const hasUnavailableItems = items.some(
+    (item) =>
+      item.available === false ||
+      (item.stockQuantity !== undefined && item.quantity > item.stockQuantity),
+  );
   const queryClient = useQueryClient();
   const subtotal = useMemo(
     () =>
       items.reduce(
         (totalCents, item) =>
-          totalCents + Math.round(item.price * 100) * item.quantity,
+          totalCents + item.priceCents * item.quantity,
         0,
-      ) / 100,
+      ),
     [items],
   );
   const itemCount = items.reduce((total, item) => total + item.quantity, 0);
@@ -94,8 +98,9 @@ export default function CartScreen() {
             {refreshError ? (
               <View style={styles.refreshWarning}>
                 <Text style={styles.refreshText}>
-                  Couldn’t refresh product prices: {refreshError}. Your saved
-                  prices are shown; the server will check them again at checkout.
+                  Couldn’t refresh product data: {refreshError}. Your saved
+                  products and prices remain visible; the server will recheck
+                  stock at checkout.
                 </Text>
                 <Pressable
                   accessibilityRole="button"

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Product } from '../features/types';
 import { useAddedFeedback } from '../features/cart/use-added-feedback';
+import { useCartStore } from '../features/cart/store';
 import { formatPrice, theme } from '../theme';
 import Button from './Button';
 import ProductImage from './ProductImage';
@@ -8,7 +9,7 @@ import ProductImage from './ProductImage';
 interface ProductCardProps {
   product: Product;
   onPress: () => void;
-  onAdd: () => void;
+  onAdd: () => boolean;
 }
 
 export default function ProductCard({
@@ -17,10 +18,17 @@ export default function ProductCard({
   onAdd,
 }: ProductCardProps) {
   const { isAdded, showAdded } = useAddedFeedback();
+  const quantityInCart = useCartStore(
+    (state) =>
+      state.items.find((item) => item.productId === product.id)?.quantity ?? 0,
+  );
+  const outOfStock = product.stockQuantity <= 0;
+  const stockLimitReached = quantityInCart >= product.stockQuantity;
 
   function handleAdd() {
-    onAdd();
-    showAdded();
+    if (onAdd()) {
+      showAdded();
+    }
   }
 
   return (
@@ -42,17 +50,26 @@ export default function ProductCard({
           <Text style={styles.description} numberOfLines={2}>
             {product.description ?? 'A thoughtful find for everyday living.'}
           </Text>
-          <Text style={styles.price}>{formatPrice(product.price)}</Text>
+          <Text style={styles.price}>{formatPrice(product.priceCents)}</Text>
         </View>
       </Pressable>
       <Button
-        title={isAdded ? 'Added to bag ✓' : 'Add to bag'}
+        title={
+          isAdded
+            ? 'Added to bag ✓'
+            : outOfStock
+              ? 'Out of stock'
+              : stockLimitReached
+                ? 'Stock limit reached'
+                : 'Add to bag'
+        }
         variant={isAdded ? 'primary' : 'secondary'}
         accessibilityLabel={
           isAdded ? `${product.name} added to bag` : `Add ${product.name} to bag`
         }
         accessibilityLiveRegion="polite"
         onPress={handleAdd}
+        disabled={outOfStock || stockLimitReached}
         style={styles.addButton}
       />
     </View>

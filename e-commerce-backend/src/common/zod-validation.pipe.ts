@@ -35,11 +35,11 @@ export const orderCreateSchema = z
           .strict(),
       )
       .min(1),
-    expectedTotal: z
+    expectedTotalCents: z
       .number()
-      .finite()
+      .int()
       .nonnegative()
-      .refine((value) => Number.isSafeInteger(Math.round(value * 100))),
+      .refine(Number.isSafeInteger, 'Expected total must be a safe integer'),
   })
   .strict();
 export type OrderCreateInput = z.infer<typeof orderCreateSchema>;

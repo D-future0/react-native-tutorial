@@ -2,7 +2,8 @@ export interface Product {
   id: string;
   name: string;
   description: string | null;
-  price: number;
+  priceCents: number;
+  stockQuantity: number;
   imageUrl: string;
   createdAt: string;
   updatedAt: string;
@@ -11,21 +12,30 @@ export interface Product {
 export interface CartLine {
   productId: string;
   name: string;
-  price: number;
+  priceCents: number;
   imageUrl: string;
   quantity: number;
   available?: boolean;
+  stockQuantity?: number;
+}
+
+export interface OrderItem {
+  productId: string;
+  name: string;
+  priceCents: number;
+  imageUrl: string;
+  quantity: number;
 }
 
 export interface CreateOrderInput {
   items: Pick<CartLine, 'productId' | 'quantity'>[];
-  expectedTotal: number;
+  expectedTotalCents: number;
 }
 
 export interface Order {
   id: string;
-  items: CartLine[];
-  total: number;
+  items: OrderItem[];
+  totalCents: number;
 }
 
 export interface User {

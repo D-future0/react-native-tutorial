@@ -32,7 +32,14 @@ function getCategory(product: Product): Exclude<Category, 'All finds'> {
 }
 
 export default function DiscoverScreen() {
-  const { data: products, isLoading, isError, error, refetch } = useProducts();
+  const {
+    data: products,
+    isLoading,
+    isError,
+    isRefetchError,
+    error,
+    refetch,
+  } = useProducts();
   const addItem = useCartStore((state) => state.addItem);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<Category>('All finds');
@@ -52,7 +59,7 @@ export default function DiscoverScreen() {
     });
   }, [category, products, search]);
 
-  if (isLoading) {
+  if (isLoading && !products) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <LoadingState label="Finding the good stuff…" />
@@ -60,7 +67,7 @@ export default function DiscoverScreen() {
     );
   }
 
-  if (isError) {
+  if (isError && !products) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ErrorState
@@ -91,6 +98,19 @@ export default function DiscoverScreen() {
         )}
         ListHeaderComponent={
           <View>
+            {isRefetchError ? (
+              <View style={styles.refreshWarning}>
+                <Text style={styles.refreshText}>
+                  Couldn’t refresh the collection. Showing the last loaded products.
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void refetch()}
+                >
+                  <Text style={styles.retryText}>Retry</Text>
+                </Pressable>
+              </View>
+            ) : null}
             <View style={styles.topBar}>
               <View>
                 <Text style={styles.eyebrow}>THE GOOD STUFF</Text>
@@ -268,4 +288,15 @@ const styles = StyleSheet.create({
   emptyMark: { color: theme.colors.primary, fontSize: 30 },
   emptyTitle: { marginTop: 8, color: theme.colors.ink, fontSize: 17, fontWeight: '700' },
   emptyCopy: { marginTop: 5, color: theme.colors.muted, fontSize: 13, textAlign: 'center' },
+  refreshWarning: {
+    marginBottom: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: theme.radius.small,
+    backgroundColor: '#EFEEE7',
+  },
+  refreshText: { flex: 1, color: theme.colors.muted, fontSize: 12, lineHeight: 18 },
+  retryText: { color: theme.colors.primary, fontSize: 12, fontWeight: '700' },
 });

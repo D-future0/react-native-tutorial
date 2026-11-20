@@ -25,9 +25,14 @@ export default function CartItem({
         <Text style={styles.name} numberOfLines={2}>
           {item.name}
         </Text>
-        <Text style={styles.price}>{formatPrice(item.price)}</Text>
+        <Text style={styles.price}>{formatPrice(item.priceCents)}</Text>
         {item.available === false ? (
-          <Text style={styles.unavailable}>No longer available</Text>
+          <Text style={styles.unavailable}>Out of stock</Text>
+        ) : item.stockQuantity !== undefined &&
+          item.quantity > item.stockQuantity ? (
+          <Text style={styles.unavailable}>
+            Only {item.stockQuantity} available; reduce quantity
+          </Text>
         ) : null}
         <View style={styles.bottomRow}>
           <View style={styles.quantity}>
@@ -44,6 +49,11 @@ export default function CartItem({
               accessibilityRole="button"
               accessibilityLabel={`Add one ${item.name}`}
               onPress={() => onChangeQuantity(item.quantity + 1)}
+              disabled={
+                item.available === false ||
+                (item.stockQuantity !== undefined &&
+                  item.quantity >= item.stockQuantity)
+              }
               style={styles.quantityButton}
             >
               <Text style={styles.quantityLabel}>+</Text>
@@ -90,7 +100,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  quantityButton: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  quantityButton: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   quantityLabel: { color: theme.colors.ink, fontSize: 18, fontWeight: '600' },
   quantityValue: { minWidth: 14, color: theme.colors.ink, textAlign: 'center' },
   remove: { color: theme.colors.muted, fontSize: 12, fontWeight: '600' },

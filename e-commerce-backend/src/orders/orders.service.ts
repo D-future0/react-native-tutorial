@@ -11,7 +11,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export interface OrderItem {
   productId: string;
   name: string;
-  price: number;
+  priceCents: number;
   imageUrl: string;
   quantity: number;
 }
@@ -19,26 +19,26 @@ export interface OrderItem {
 export interface Order {
   id: string;
   items: OrderItem[];
-  total: number;
+  totalCents: number;
 }
 
 interface OrderRecord {
   id: string;
   items: string;
-  total: number;
+  totalCents: number;
 }
 
 @Injectable()
 export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(): Promise<Order[]> {
-    const orders = await this.prisma.order.findMany();
+  async findAll(userId: string): Promise<Order[]> {
+    const orders = await this.prisma.order.findMany({ where: { userId } });
     return orders.map((order: OrderRecord) => this.deserialize(order));
   }
 
-  async findOne(id: string): Promise<Order> {
-    const order = await this.prisma.order.findUnique({ where: { id } });
+  async findOne(id: string, userId: string): Promise<Order> {
+    const order = await this.prisma.order.findFirst({ where: { id, userId } });
 
     if (!order) {
       throw new NotFoundException(`Order ${id} not found`);
@@ -47,7 +47,7 @@ export class OrdersService {
     return this.deserialize(order);
   }
 
-  async create(body: OrderCreateInput): Promise<Order> {
+  async create(body: OrderCreateInput, userId: string): Promise<Order> {
     const order = await this.prisma.$transaction(async (transaction) => {
       const requestedQuantities = new Map<string, number>();
       for (const item of body.items) {
@@ -76,20 +76,26 @@ export class OrdersService {
       const items = [...requestedQuantities].map(([productId, quantity]) => {
         const product = productById.get(productId);
         if (!product) {
-          throw new InternalServerErrorException('Product lookup failed');
+          throw new ConflictException(
+            'A product in your bag is no longer available. Refresh your bag and try again.',
+          );
         }
-        if (!Number.isFinite(product.price) || product.price < 0) {
+        if (!Number.isSafeInteger(product.priceCents) || product.priceCents < 0) {
           throw new InternalServerErrorException(
             `Product ${productId} has an invalid price`,
           );
         }
+        if (product.stockQuantity < quantity) {
+          throw new ConflictException(
+            `Only ${product.stockQuantity} units of ${product.name} remain in stock.`,
+          );
+        }
 
-        const unitPriceCents = Math.round(product.price * 100);
-        const lineTotalCents = unitPriceCents * quantity;
+        const lineTotalCents = product.priceCents * quantity;
         if (
-          !Number.isSafeInteger(unitPriceCents) ||
           !Number.isSafeInteger(lineTotalCents) ||
-          !Number.isSafeInteger(totalCents + lineTotalCents)
+          !Number.isSafeInteger(totalCents + lineTotalCents) ||
+          totalCents + lineTotalCents > 2_147_483_647
         ) {
           throw new BadRequestException('Order total is too large');
         }
@@ -98,22 +104,39 @@ export class OrdersService {
         return {
           productId: product.id,
           name: product.name,
-          price: unitPriceCents / 100,
+          priceCents: product.priceCents,
           imageUrl: product.imageUrl,
           quantity,
         };
       });
 
-      if (Math.round(body.expectedTotal * 100) !== totalCents) {
+      if (body.expectedTotalCents !== totalCents) {
         throw new ConflictException(
           'Product prices changed. Review the updated total before placing your order.',
         );
       }
 
+      for (const item of items) {
+        const result = await transaction.product.updateMany({
+          where: {
+            id: item.productId,
+            priceCents: item.priceCents,
+            stockQuantity: { gte: item.quantity },
+          },
+          data: { stockQuantity: { decrement: item.quantity } },
+        });
+        if (result.count !== 1) {
+          throw new ConflictException(
+            'Stock or pricing changed. Refresh your bag and try again.',
+          );
+        }
+      }
+
       return transaction.order.create({
         data: {
           items: JSON.stringify(items),
-          total: totalCents / 100,
+          totalCents,
+          userId,
         },
       });
     });
@@ -125,7 +148,7 @@ export class OrdersService {
     return {
       id: order.id,
       items: JSON.parse(order.items),
-      total: order.total,
+      totalCents: order.totalCents,
     };
   }
 }

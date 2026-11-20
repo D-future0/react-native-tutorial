@@ -19,10 +19,10 @@ export default function CartBackgroundRefresh() {
   });
 
   useEffect(() => {
-    if (query.data && !query.isError) {
+    if (query.data && !query.isRefetchError) {
       syncProducts(query.data);
       setRefreshError(null);
-    } else if (query.isError) {
+    } else if (query.isRefetchError || query.isError) {
       setRefreshError(
         query.error instanceof Error
           ? query.error.message
@@ -33,6 +33,7 @@ export default function CartBackgroundRefresh() {
     query.data,
     query.error,
     query.isError,
+    query.isRefetchError,
     setRefreshError,
     syncProducts,
   ]);

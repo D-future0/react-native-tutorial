@@ -11,12 +11,31 @@ import Button from '../../src/components/Button';
 import EmptyState from '../../src/components/EmptyState';
 import ErrorState from '../../src/components/ErrorState';
 import LoadingState from '../../src/components/LoadingState';
+import { useAuthStore } from '../../src/features/auth/store';
 import { useOrders } from '../../src/features/orders/hooks';
 import { formatPrice, theme } from '../../src/theme';
 
 export default function OrdersScreen() {
   const { placed } = useLocalSearchParams<{ placed?: string }>();
+  const accessToken = useAuthStore((state) => state.accessToken);
   const { data: orders, isLoading, isError, error, refetch } = useOrders();
+
+  if (!accessToken) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <EmptyState
+          title="Sign in to see your orders"
+          description="Your order history is saved to your account."
+          action={
+            <Button
+              title="Go to your account"
+              onPress={() => router.push('/(tabs)/profile')}
+            />
+          }
+        />
+      </SafeAreaView>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -80,7 +99,7 @@ export default function OrdersScreen() {
                     <Text style={styles.orderLabel}>ORDER</Text>
                     <Text style={styles.orderId}>{order.id.slice(0, 12)}</Text>
                   </View>
-                  <Text style={styles.orderTotal}>{formatPrice(order.total)}</Text>
+                  <Text style={styles.orderTotal}>{formatPrice(order.totalCents)}</Text>
                 </View>
                 <View style={styles.divider} />
                 {order.items.map((item, index) => (

@@ -15,28 +15,33 @@ import { ApiError } from '../src/features/lib/api-client';
 import { cartProductsQueryKey } from '../src/features/cart/background-refresh';
 import { useCartStore } from '../src/features/cart/store';
 import { useCreateOrder } from '../src/features/orders/hooks';
+import { useAuthStore } from '../src/features/auth/store';
 import { formatPrice, theme } from '../src/theme';
 
 export default function CheckoutScreen() {
   const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
   const refreshError = useCartStore((state) => state.refreshError);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const { mutateAsync, isPending } = useCreateOrder();
   const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const totalCents = items.reduce(
-    (sum, item) => sum + Math.round(item.price * 100) * item.quantity,
+    (sum, item) => sum + item.priceCents * item.quantity,
     0,
   );
-  const total = totalCents / 100;
-  const hasUnavailableItems = items.some((item) => item.available === false);
+  const hasUnavailableItems = items.some(
+    (item) =>
+      item.available === false ||
+      (item.stockQuantity !== undefined && item.quantity > item.stockQuantity),
+  );
 
   async function placeOrder() {
     setSubmitError(null);
     try {
       const order = await mutateAsync({
         items: items.map(({ productId, quantity }) => ({ productId, quantity })),
-        expectedTotal: total,
+        expectedTotalCents: totalCents,
       });
       clearCart();
       router.replace({ pathname: '/orders', params: { placed: order.id } });
@@ -87,11 +92,16 @@ export default function CheckoutScreen() {
                     <Text style={styles.itemName}>{item.name}</Text>
                     <Text style={styles.itemQuantity}>
                       Qty {item.quantity}
-                      {item.available === false ? ' · Unavailable' : ''}
+                      {item.available === false
+                        ? ' · Out of stock'
+                        : item.stockQuantity !== undefined &&
+                            item.quantity > item.stockQuantity
+                          ? ` · Only ${item.stockQuantity} available`
+                          : ''}
                     </Text>
                   </View>
                   <Text style={styles.itemPrice}>
-                    {formatPrice(Math.round(item.price * 100) * item.quantity / 100)}
+                    {formatPrice(item.priceCents * item.quantity)}
                   </Text>
                 </View>
               ))}
@@ -99,7 +109,7 @@ export default function CheckoutScreen() {
 
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Order total</Text>
-              <Text style={styles.totalValue}>{formatPrice(total)}</Text>
+              <Text style={styles.totalValue}>{formatPrice(totalCents)}</Text>
             </View>
 
             <View style={styles.notice}>
@@ -112,9 +122,9 @@ export default function CheckoutScreen() {
             {refreshError ? (
               <View style={styles.refreshWarning}>
                 <Text style={styles.refreshText}>
-                  Couldn’t refresh product prices: {refreshError}. Your saved
-                  prices are shown; the server will verify them before accepting
-                  the order.
+                  Couldn’t refresh product data: {refreshError}. Your saved
+                  products and prices remain visible; the server will verify
+                  stock before accepting the order.
                 </Text>
                 <Pressable
                   accessibilityRole="button"
@@ -131,18 +141,29 @@ export default function CheckoutScreen() {
             ) : null}
             {hasUnavailableItems ? (
               <Text style={styles.unavailableText}>
-                Remove unavailable items from your bag before placing the order.
+                Update quantities or remove out-of-stock items before placing the order.
               </Text>
+            ) : null}
+            {!accessToken ? (
+              <View style={styles.signInPrompt}>
+                <Text style={styles.unavailableText}>
+                  Sign in to place an order and save it to your account.
+                </Text>
+                <Button
+                  title="Go to your account"
+                  onPress={() => router.push('/(tabs)/profile')}
+                />
+              </View>
             ) : null}
             {submitError ? <Text style={styles.error}>{submitError}</Text> : null}
           </ScrollView>
 
           <View style={styles.footer}>
             <Button
-              title={`Place order · ${formatPrice(total)}`}
+              title={`Place order · ${formatPrice(totalCents)}`}
               onPress={() => void placeOrder()}
               loading={isPending}
-              disabled={isPending || hasUnavailableItems}
+              disabled={isPending || hasUnavailableItems || !accessToken}
             />
           </View>
         </>
@@ -232,6 +253,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
+  signInPrompt: { marginTop: 16 },
   error: { marginTop: 15, color: theme.colors.danger, fontSize: 13, lineHeight: 19 },
   footer: {
     padding: 18,
