@@ -40,6 +40,7 @@ export const orderCreateSchema = z
       .int()
       .nonnegative()
       .refine(Number.isSafeInteger, 'Expected total must be a safe integer'),
+    deliveryAddress: z.string().trim().min(1).max(500),
   })
   .strict();
 export type OrderCreateInput = z.infer<typeof orderCreateSchema>;

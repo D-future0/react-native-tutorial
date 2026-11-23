@@ -97,18 +97,21 @@ Product records include `id`, `name`, `description`, `priceCents`,
 
 All order endpoints require `Authorization: Bearer <accessToken>` and only
 return orders belonging to that user. Orders created before user ownership was
-added remain unassigned and are not exposed through these endpoints. Create an order by sending product IDs,
-positive integer quantities, and the expected total in cents. Product names,
+added remain unassigned and are not exposed through these endpoints. Create an
+order by sending product IDs, positive integer quantities, the expected total in
+cents, and a non-empty delivery address of up to 500 characters. Product names,
 images, and prices are loaded from the database; client-supplied price fields
 are rejected. The backend calculates the total in integer cents and atomically
 decrements inventory with the order insert. It returns `409 Conflict` if stock
-or the expected total changed. Review the refreshed cart and submit again after
-a conflict.
+or the expected total changed. The delivery address is validated and saved with
+the order; it is customer-provided information, not verified proof of delivery.
+Review the refreshed cart and submit again after a conflict.
 
 ```json
 {
   "items": [{ "productId": "product-id", "quantity": 1 }],
-  "expectedTotalCents": 2999
+  "expectedTotalCents": 2999,
+  "deliveryAddress": "12 Market Street, San Francisco"
 }
 ```
 

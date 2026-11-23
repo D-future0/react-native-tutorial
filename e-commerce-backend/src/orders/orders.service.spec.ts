@@ -54,6 +54,7 @@ describe('OrdersService', () => {
     const input: OrderCreateInput = {
       items: [{ productId: product.id, quantity: 2 }],
       expectedTotalCents: 2468,
+      deliveryAddress: '1 Market Street, San Francisco',
     };
 
     const order = await service.create(input, 'user-1');
@@ -78,6 +79,7 @@ describe('OrdersService', () => {
           },
         ]),
         totalCents: 2468,
+        deliveryAddress: '1 Market Street, San Francisco',
         userId: 'user-1',
       },
     });
@@ -92,6 +94,7 @@ describe('OrdersService', () => {
         {
           items: [{ productId: product.id, quantity: 2 }],
           expectedTotalCents: 1,
+          deliveryAddress: '1 Market Street, San Francisco',
         },
         'user-1',
       ),
@@ -108,6 +111,7 @@ describe('OrdersService', () => {
         {
           items: [{ productId: product.id, quantity: 1 }],
           expectedTotalCents: product.priceCents,
+          deliveryAddress: '1 Market Street, San Francisco',
         },
         'user-1',
       ),
@@ -123,6 +127,7 @@ describe('OrdersService', () => {
         {
           items: [{ productId: product.id, quantity: 1 }],
           expectedTotalCents: product.priceCents,
+          deliveryAddress: '1 Market Street, San Francisco',
         },
         'user-1',
       ),
@@ -150,12 +155,34 @@ describe('OrdersService', () => {
       orderCreateSchema.safeParse({
         items: [{ productId: product.id, quantity: 1, priceCents: 1 }],
         expectedTotalCents: 1,
+        deliveryAddress: '1 Market Street, San Francisco',
       }).success,
     ).toBe(false);
     expect(
       orderCreateSchema.safeParse({
         items: [{ productId: product.id, quantity: 0 }],
         expectedTotalCents: 0,
+        deliveryAddress: '1 Market Street, San Francisco',
+      }).success,
+    ).toBe(false);
+    expect(
+      orderCreateSchema.safeParse({
+        items: [{ productId: product.id, quantity: 1 }],
+        expectedTotalCents: product.priceCents,
+        deliveryAddress: '   ',
+      }).success,
+    ).toBe(false);
+    expect(
+      orderCreateSchema.safeParse({
+        items: [{ productId: product.id, quantity: 1 }],
+        expectedTotalCents: product.priceCents,
+      }).success,
+    ).toBe(false);
+    expect(
+      orderCreateSchema.safeParse({
+        items: [{ productId: product.id, quantity: 1 }],
+        expectedTotalCents: product.priceCents,
+        deliveryAddress: 'x'.repeat(501),
       }).success,
     ).toBe(false);
   });

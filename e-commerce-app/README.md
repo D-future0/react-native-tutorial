@@ -15,7 +15,7 @@ npm run start
 ```
 
 Set `EXPO_PUBLIC_API_URL` in `.env` to the backend's system LAN address and
-port. The current development address is `http://192.168.100.67:3000`; replace
+port. The current development address is `http://172.20.10.13:3000`; replace
 the IP if the computer's network address changes. Keep the computer and phone
 on the same network so the app can reach the backend. Restart Expo after
 changing `.env` so the URL is included in the app bundle.
@@ -23,7 +23,7 @@ changing `.env` so the URL is included in the app bundle.
 Start the backend and apply its Prisma migrations before using the app. The
 backend must be listening on the network interface and reachable from the
 device running Expo. For Expo Web opened from a different host address, add
-that app origin (for example, `http://192.168.100.67:8081`) to the backend's
+that app origin (for example, `http://172.20.10.13:8081`) to the backend's
 `CORS_ORIGINS` setting.
 
 ## App features
@@ -33,6 +33,9 @@ that app origin (for example, `http://192.168.100.67:8081`) to the backend's
   background.
 - Submit orders with server-validated prices and inventory; checkout does not
   process payments.
+- Enter a delivery address manually or explicitly request a device location
+  suggestion. The app does not store or send coordinates, and location
+  suggestions should be checked before submitting the server-validated address.
 - View only orders associated with the signed-in account.
 - Register and sign in with the backend. Access tokens use SecureStore on
   Android/iOS and browser storage on web.

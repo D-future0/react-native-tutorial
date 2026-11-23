@@ -30,12 +30,14 @@ export interface OrderItem {
 export interface CreateOrderInput {
   items: Pick<CartLine, 'productId' | 'quantity'>[];
   expectedTotalCents: number;
+  deliveryAddress: string;
 }
 
 export interface Order {
   id: string;
   items: OrderItem[];
   totalCents: number;
+  deliveryAddress: string | null;
 }
 
 export interface User {

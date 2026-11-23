@@ -110,6 +110,11 @@ export default function OrdersScreen() {
                     <Text style={styles.itemQuantity}>× {item.quantity}</Text>
                   </View>
                 ))}
+                {order.deliveryAddress ? (
+                  <Text style={styles.deliveryAddress}>
+                    Deliver to: {order.deliveryAddress}
+                  </Text>
+                ) : null}
               </View>
             ))}
           </View>
@@ -160,4 +165,10 @@ const styles = StyleSheet.create({
   itemRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 4 },
   itemName: { flex: 1, color: theme.colors.ink, fontSize: 13 },
   itemQuantity: { color: theme.colors.muted, fontSize: 12 },
+  deliveryAddress: {
+    marginTop: 11,
+    color: theme.colors.muted,
+    fontSize: 12,
+    lineHeight: 18,
+  },
 });

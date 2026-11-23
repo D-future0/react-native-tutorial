@@ -20,12 +20,14 @@ export interface Order {
   id: string;
   items: OrderItem[];
   totalCents: number;
+  deliveryAddress: string | null;
 }
 
 interface OrderRecord {
   id: string;
   items: string;
   totalCents: number;
+  deliveryAddress: string | null;
 }
 
 @Injectable()
@@ -136,6 +138,7 @@ export class OrdersService {
         data: {
           items: JSON.stringify(items),
           totalCents,
+          deliveryAddress: body.deliveryAddress,
           userId,
         },
       });
@@ -149,6 +152,7 @@ export class OrdersService {
       id: order.id,
       items: JSON.parse(order.items),
       totalCents: order.totalCents,
+      deliveryAddress: order.deliveryAddress,
     };
   }
 }
