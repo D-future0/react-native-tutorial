@@ -3,8 +3,7 @@ import * as Location from 'expo-location';
 export type LocationLookupErrorCode =
   | 'permission-denied'
   | 'services-disabled'
-  | 'timeout'
-  | 'no-address';
+  | 'timeout';
 
 export class LocationLookupError extends Error {
   constructor(
@@ -15,6 +14,25 @@ export class LocationLookupError extends Error {
     this.name = 'LocationLookupError';
   }
 }
+
+export interface LocationCoordinates {
+  latitude: number;
+  longitude: number;
+}
+
+export type GeocodingErrorCode = 'no-address' | 'reverse-geocoding-failed';
+
+export type LocationAddressResult =
+  | {
+      coordinates: LocationCoordinates;
+      formattedAddress: string;
+      geocodingError: null;
+    }
+  | {
+      coordinates: LocationCoordinates;
+      formattedAddress: null;
+      geocodingError: GeocodingErrorCode;
+    };
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -33,7 +51,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   });
 }
 
-export async function getCurrentAddress(): Promise<string> {
+export async function getCurrentAddress(): Promise<LocationAddressResult> {
   if (!(await Location.hasServicesEnabledAsync())) {
     throw new LocationLookupError(
       'services-disabled',
@@ -45,7 +63,7 @@ export async function getCurrentAddress(): Promise<string> {
     await Location.getForegroundPermissionsAsync();
 
   let permissionStatus = permission.status;
-  if (permissionStatus === 'undetermined' && permission.canAskAgain) {
+  if (permission.status !== 'granted' && permission.canAskAgain) {
     const requestedPermission =
       await Location.requestForegroundPermissionsAsync();
     permissionStatus = requestedPermission.status;
@@ -65,32 +83,56 @@ export async function getCurrentAddress(): Promise<string> {
     15_000,
   );
 
-  const addresses = await Location.reverseGeocodeAsync({
+  const coordinates = {
     latitude: location.coords.latitude,
     longitude: location.coords.longitude,
-  });
+  };
 
-  if (!addresses.length) {
-    throw new LocationLookupError(
-      'no-address',
-      "We couldn’t find a street address for this location. Enter it manually.",
-    );
+  let addresses: Location.LocationGeocodedAddress[];
+  try {
+    addresses = await Location.reverseGeocodeAsync(coordinates);
+  } catch {
+    return {
+      coordinates,
+      formattedAddress: null,
+      geocodingError: 'reverse-geocoding-failed',
+    };
   }
 
   const address = addresses[0];
+  if (!address) {
+    return {
+      coordinates,
+      formattedAddress: null,
+      geocodingError: 'no-address',
+    };
+  }
+
   const streetLine =
     [address.streetNumber, address.street]
       .filter((part): part is string => Boolean(part?.trim()))
       .join(' ') || address.name?.trim();
+  const formattedAddress = address.formattedAddress?.trim();
 
-  if (!streetLine) {
-    throw new LocationLookupError(
-      'no-address',
-      "We couldn’t find a street address for this location. Enter it manually.",
-    );
+  if (!streetLine && formattedAddress) {
+    return {
+      coordinates,
+      formattedAddress,
+      geocodingError: null,
+    };
   }
 
-  return [
+  if (!streetLine) {
+    return {
+      coordinates,
+      formattedAddress: null,
+      geocodingError: 'no-address',
+    };
+  }
+
+  return {
+    coordinates,
+    formattedAddress: [
     streetLine,
     address.district,
     address.subregion,
@@ -106,5 +148,7 @@ export async function getCurrentAddress(): Promise<string> {
           (other) => other.toLocaleLowerCase() === part.toLocaleLowerCase(),
         ) === index,
     )
-    .join(', ');
+      .join(', '),
+    geocodingError: null,
+  };
 }

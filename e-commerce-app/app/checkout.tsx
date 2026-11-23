@@ -108,7 +108,7 @@ export default function CheckoutScreen() {
     setLocationNotice(null);
 
     try {
-      const address = await getCurrentAddress();
+      const locationResult = await getCurrentAddress();
       if (requestId !== locationRequestId.current || !isFocused.current) return;
       if (addressRevisionAtStart !== addressRevision.current) {
         setLocationNotice(
@@ -116,7 +116,18 @@ export default function CheckoutScreen() {
         );
         return;
       }
-      setDeliveryAddress(address);
+      if (!locationResult.formattedAddress) {
+        setLocationRetry(
+          locationResult.geocodingError === 'reverse-geocoding-failed',
+        );
+        setLocationNotice(
+          locationResult.geocodingError === 'no-address'
+            ? 'Your location was found, but no street address was available. Enter it manually.'
+            : 'Your location was found, but it could not be converted to an address. Enter it manually or retry.',
+        );
+        return;
+      }
+      setDeliveryAddress(locationResult.formattedAddress);
       setAddressError(null);
       setLocationRetry(false);
       setLocationNotice('Address suggested from your current location. Please verify it.');
