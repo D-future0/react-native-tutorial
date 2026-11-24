@@ -2,6 +2,8 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,7 +16,8 @@ import Button from '../../src/components/Button';
 import ErrorState from '../../src/components/ErrorState';
 import LoadingState from '../../src/components/LoadingState';
 import { fetchCurrentUser, login, register } from '../../src/features/auth/api';
-import { removeSessionToken, saveSessionToken } from '../../src/features/auth/session';
+import { saveSessionTokens } from '../../src/features/auth/session';
+import { logoutSession } from '../../src/features/auth/session-manager';
 import { useAuthStore } from '../../src/features/auth/store';
 import { loginSchema, registerSchema } from '../../src/features/auth/validation';
 import { theme } from '../../src/theme';
@@ -58,7 +61,8 @@ export default function ProfileScreen() {
         mode === 'register'
           ? await register(result.data.email, result.data.password)
           : await login(result.data.email, result.data.password);
-      await saveSessionToken(response.accessToken);
+      setAccessToken(null);
+      await saveSessionTokens(response.accessToken, response.refreshToken);
       setAccessToken(response.accessToken);
       await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       setPassword('');
@@ -76,31 +80,42 @@ export default function ProfileScreen() {
     setFormError(null);
     setBusy(true);
     try {
-      await removeSessionToken();
-      setAccessToken(null);
-      queryClient.removeQueries({ queryKey: ['auth', 'me'] });
-      queryClient.removeQueries({ queryKey: ['orders'] });
+      await logoutSession();
     } catch (error) {
       setFormError(
         error instanceof Error ? error.message : 'Could not sign out right now.',
       );
     } finally {
+      setAccessToken(null);
+      queryClient.removeQueries({ queryKey: ['auth', 'me'] });
+      queryClient.removeQueries({ queryKey: ['orders'] });
       setBusy(false);
     }
   }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
+      <KeyboardAvoidingView
+        behavior={
+          Platform.OS === 'ios'
+            ? 'padding'
+            : Platform.OS === 'android'
+              ? 'height'
+              : undefined
+        }
+        style={styles.keyboardAvoiding}
       >
+        <ScrollView
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.content}
+        >
         <View style={styles.topRow}>
           <View>
             <Text style={styles.eyebrow}>A LITTLE ABOUT YOU</Text>
             <Text style={styles.title}>Your account</Text>
           </View>
-          <Text style={styles.brand}>M.</Text>
+          <Text style={styles.brand}>S.</Text>
         </View>
 
         <View style={styles.welcomeCard}>
@@ -262,13 +277,15 @@ export default function ProfileScreen() {
         )}
 
         <Text style={styles.footerNote}>Thoughtfully chosen. Yours to enjoy.</Text>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: theme.colors.background },
+  keyboardAvoiding: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 36 },
   topRow: {
     flexDirection: 'row',

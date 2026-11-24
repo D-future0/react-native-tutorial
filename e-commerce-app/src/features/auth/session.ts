@@ -1,15 +1,10 @@
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from '../../services/secure-storage.service';
 
-const ACCESS_TOKEN_KEY = 'ecommerce-access-token';
+export {
+  secureStorage as sessionStorage,
+  type StoredTokens as SessionTokens,
+} from '../../services/secure-storage.service';
 
-export function getSessionToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
-}
-
-export function saveSessionToken(token: string): Promise<void> {
-  return SecureStore.setItemAsync(ACCESS_TOKEN_KEY, token);
-}
-
-export function removeSessionToken(): Promise<void> {
-  return SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
-}
+export const getSessionTokens = secureStorage.getTokens;
+export const saveSessionTokens = secureStorage.saveTokens;
+export const removeSessionTokens = secureStorage.clearTokens;

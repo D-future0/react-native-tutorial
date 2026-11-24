@@ -1,4 +1,4 @@
-# Morrow Store
+# Shoppi Store
 
 Expo frontend for the e-commerce backend. Browse the catalog, search products,
 manage a locally saved bag, place demo orders, and create or sign in to an
@@ -37,8 +37,10 @@ that app origin (for example, `http://172.20.10.13:8081`) to the backend's
   suggestion. The app does not store or send coordinates, and location
   suggestions should be checked before submitting the server-validated address.
 - View only orders associated with the signed-in account.
-- Register and sign in with the backend. Access tokens use SecureStore on
-  Android/iOS and browser storage on web.
+- Register and sign in with the backend. The access/refresh token pair is stored
+  as one SecureStore record on Android/iOS and restored and refreshed on startup.
+  Browsers use a single AsyncStorage record because Expo SecureStore is not
+  available on web; browser storage is not equivalent to native secure storage.
 
 Available commands:
 
@@ -47,5 +49,6 @@ npm run start
 npm run android
 npm run ios
 npm run web
+npm test
 npx tsc --noEmit
 ```

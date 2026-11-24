@@ -21,6 +21,27 @@ export function login(email: string, password: string): Promise<AuthResponse> {
 export function fetchCurrentUser(
   accessToken: string,
   signal?: AbortSignal,
+  refreshOnUnauthorized = true,
 ): Promise<User> {
-  return apiRequest<User>('/auth/me', { token: accessToken, signal });
+  return apiRequest<User>('/auth/me', {
+    token: accessToken,
+    signal,
+    refreshOnUnauthorized,
+  });
+}
+
+export function refreshSession(refreshToken: string): Promise<AuthResponse> {
+  return apiRequest<AuthResponse>('/auth/refresh', {
+    method: 'POST',
+    body: { refreshToken },
+    refreshOnUnauthorized: false,
+  });
+}
+
+export function revokeSession(refreshToken: string): Promise<void> {
+  return apiRequest<void>('/auth/logout', {
+    method: 'POST',
+    body: { refreshToken },
+    refreshOnUnauthorized: false,
+  });
 }

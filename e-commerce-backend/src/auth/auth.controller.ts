@@ -4,14 +4,24 @@ import {
   Get,
   Post,
   Req,
+  HttpCode,
+  HttpStatus,
   UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { ZodValidationPipe } from '../common/zod-validation.pipe.js';
 import { AuthService } from './auth.service.js';
 import type { AuthResult, PublicUser } from './auth.service.js';
-import { loginSchema, registerSchema } from './auth.schemas.js';
-import type { LoginInput, RegisterInput } from './auth.schemas.js';
+import {
+  loginSchema,
+  refreshTokenSchema,
+  registerSchema,
+} from './auth.schemas.js';
+import type {
+  LoginInput,
+  RefreshTokenInput,
+  RegisterInput,
+} from './auth.schemas.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
 
 interface AuthenticatedRequest extends Request {
@@ -34,6 +44,21 @@ export class AuthController {
     @Body(new ZodValidationPipe(loginSchema)) body: LoginInput,
   ): Promise<AuthResult> {
     return this.authService.login(body);
+  }
+
+  @Post('refresh')
+  refresh(
+    @Body(new ZodValidationPipe(refreshTokenSchema)) body: RefreshTokenInput,
+  ): Promise<AuthResult> {
+    return this.authService.refresh(body.refreshToken);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async logout(
+    @Body(new ZodValidationPipe(refreshTokenSchema)) body: RefreshTokenInput,
+  ): Promise<void> {
+    await this.authService.revokeRefreshToken(body.refreshToken);
   }
 
   @Get('me')

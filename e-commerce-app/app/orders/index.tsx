@@ -62,7 +62,7 @@ export default function OrdersScreen() {
         <Pressable onPress={() => router.back()} accessibilityRole="button">
           <Text style={styles.back}>‹  Back</Text>
         </Pressable>
-        <Text style={styles.eyebrow}>YOUR MORROW HISTORY</Text>
+        <Text style={styles.eyebrow}>YOUR Shoppi HISTORY</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>

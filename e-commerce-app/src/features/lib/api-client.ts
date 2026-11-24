@@ -3,6 +3,7 @@ interface RequestOptions {
   body?: unknown;
   token?: string | null;
   signal?: AbortSignal;
+  refreshOnUnauthorized?: boolean;
 }
 
 interface ApiErrorBody {
@@ -21,6 +22,14 @@ export class ApiError extends Error {
 }
 
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
+type AccessTokenRefresher = (expiredToken: string) => Promise<string>;
+let accessTokenRefresher: AccessTokenRefresher | null = null;
+
+export function setAccessTokenRefresher(
+  refresher: AccessTokenRefresher | null,
+): void {
+  accessTokenRefresher = refresher;
+}
 
 export async function apiRequest<T>(
   path: string,
@@ -32,21 +41,33 @@ export async function apiRequest<T>(
     );
   }
 
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-  };
-  if (options.body !== undefined) {
-    headers['Content-Type'] = 'application/json';
-  }
-  if (options.token) {
-    headers.Authorization = `Bearer ${options.token}`;
+  let response = await sendRequest(path, options, apiBaseUrl);
+  if (
+    response.status === 401 &&
+    options.token &&
+    options.refreshOnUnauthorized !== false &&
+    accessTokenRefresher
+  ) {
+    const refreshedToken = await accessTokenRefresher(options.token);
+    response = await sendRequest(
+      path,
+      { ...options, token: refreshedToken, refreshOnUnauthorized: false },
+      apiBaseUrl,
+    );
   }
 
-  let response: Response;
+  return readResponse<T>(response);
+}
+
+async function sendRequest(
+  path: string,
+  options: RequestOptions,
+  baseUrl: string,
+): Promise<Response> {
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, {
+    return await fetch(`${baseUrl}${path}`, {
       method: options.method ?? 'GET',
-      headers,
+      headers: createHeaders(options),
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: options.signal,
     });
@@ -58,7 +79,9 @@ export async function apiRequest<T>(
       `Could not connect to the store API at ${apiBaseUrl}. Check the server and EXPO_PUBLIC_API_URL.`,
     );
   }
+}
 
+async function readResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get('content-type') ?? '';
   const data: unknown = contentType.includes('application/json')
     ? await response.json()
@@ -73,6 +96,19 @@ export async function apiRequest<T>(
   }
 
   return data as T;
+}
+
+function createHeaders(options: RequestOptions): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+  if (options.body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (options.token) {
+    headers.Authorization = `Bearer ${options.token}`;
+  }
+  return headers;
 }
 
 function isApiErrorBody(value: unknown): value is ApiErrorBody {

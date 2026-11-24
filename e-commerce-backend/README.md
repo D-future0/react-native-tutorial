@@ -121,6 +121,8 @@ Review the refreshed cart and submit again after a conflict.
 | --- | --- | --- |
 | `POST` | `/auth/register` | Register with email and password |
 | `POST` | `/auth/login` | Sign in and receive a JWT |
+| `POST` | `/auth/refresh` | Rotate an expired access token using a refresh token |
+| `POST` | `/auth/logout` | Revoke a refresh token |
 | `GET` | `/auth/me` | Get the current user (Bearer token required) |
 
 Registration and login accept:
@@ -134,7 +136,19 @@ Registration and login accept:
 
 Passwords must be at least 8 characters and are stored as bcrypt hashes.
 Registration normalizes email casing; an existing email returns `409 Conflict`.
-Successful registration and login return an `accessToken`. Send it as
+Successful registration and login return an `accessToken` and a rotating
+`refreshToken`. Refresh tokens expire after 30 days and are stored server-side
+only as SHA-256 hashes. Refresh or logout with:
+
+```json
+{
+  "refreshToken": "opaque-refresh-token"
+}
+```
+
+Refreshing revokes the submitted token and returns a replacement token pair;
+reusing a refresh token is rejected. Logout revokes the refresh token. Access
+tokens remain valid until their one-hour expiry. Send the access token as
 `Authorization: Bearer <accessToken>` to access `/auth/me` and the order endpoints.
 
 Product endpoints are public; order endpoints and `/auth/me` require

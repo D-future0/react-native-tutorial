@@ -3,8 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   AppState,
+  KeyboardAvoidingView,
   Linking,
   Pressable,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -203,7 +205,17 @@ export default function CheckoutScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <View style={styles.header}>
+      <KeyboardAvoidingView
+        behavior={
+          Platform.OS === 'ios'
+            ? 'padding'
+            : Platform.OS === 'android'
+              ? 'height'
+              : undefined
+        }
+        style={styles.keyboardAvoiding}
+      >
+        <View style={styles.header}>
         <Pressable onPress={() => router.back()} accessibilityRole="button">
           <Text style={styles.back}>‹  Your bag</Text>
         </Pressable>
@@ -220,7 +232,11 @@ export default function CheckoutScreen() {
         />
       ) : (
         <>
-          <ScrollView contentContainerStyle={styles.content}>
+          <ScrollView
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.content}
+          >
             <Text style={styles.eyebrow}>ALMOST YOURS</Text>
             <Text style={styles.title}>A good choice.</Text>
             <Text style={styles.copy}>
@@ -364,13 +380,15 @@ export default function CheckoutScreen() {
             />
           </View>
         </>
-      )}
+        )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: theme.colors.background },
+  keyboardAvoiding: { flex: 1 },
   header: {
     minHeight: 54,
     paddingHorizontal: 20,

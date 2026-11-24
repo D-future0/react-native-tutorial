@@ -40,9 +40,9 @@ export default function ProductImage({
             <View style={styles.artworkSun} />
             <View style={styles.artworkShapeBack} />
             <View style={styles.artworkShapeFront} />
-            <Text style={styles.artworkMark}>M.</Text>
+            <Text style={styles.artworkMark}>S.</Text>
           </View>
-          <Text style={styles.fallbackLabel}>MORROW · GOOD FINDS</Text>
+          <Text style={styles.fallbackLabel}>Shoppi · GOOD FINDS</Text>
         </View>
       )}
     </View>

@@ -85,6 +85,7 @@ describe('AppController (e2e)', () => {
     expect(registration.body.user.email).toBe(email);
     expect(registration.body.passwordHash).toBeUndefined();
     expect(registration.body.accessToken).toEqual(expect.any(String));
+    expect(registration.body.refreshToken).toEqual(expect.any(String));
 
     await request(app.getHttpServer())
       .post('/auth/register')
@@ -109,6 +110,27 @@ describe('AppController (e2e)', () => {
         expect(body.email).toBe(email);
         expect(body.passwordHash).toBeUndefined();
       });
+
+    const refreshed = await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .send({ refreshToken: login.body.refreshToken })
+      .expect(201);
+    expect(refreshed.body.refreshToken).not.toBe(login.body.refreshToken);
+
+    await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .send({ refreshToken: login.body.refreshToken })
+      .expect(401);
+
+    await request(app.getHttpServer())
+      .post('/auth/logout')
+      .send({ refreshToken: refreshed.body.refreshToken })
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .send({ refreshToken: refreshed.body.refreshToken })
+      .expect(401);
   }, 20_000);
 
   it('rejects invalid order ids for authenticated users', async () => {
