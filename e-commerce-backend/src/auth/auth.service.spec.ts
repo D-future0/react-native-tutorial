@@ -60,7 +60,6 @@ function createService(revokedAt: Date | null = null) {
     service: new AuthService(prisma, jwt as never),
     prisma,
     transaction,
-    userCreate,
     get transactionFinished() {
       return transactionFinished;
     },

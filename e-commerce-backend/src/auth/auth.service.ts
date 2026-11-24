@@ -58,7 +58,7 @@ export class AuthService {
       throw error;
     }
 
-    return this.createAuthResult(user, undefined, undefined, undefined, deviceName);
+    return this.createAuthResult(user, undefined, { deviceName });
   }
 
   async login(input: LoginInput, deviceName?: string): Promise<AuthResult> {
@@ -70,7 +70,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    return this.createAuthResult(user, undefined, undefined, undefined, deviceName);
+    return this.createAuthResult(user, undefined, { deviceName });
   }
 
   async getProfile(userId: string): Promise<PublicUser> {
@@ -159,8 +159,10 @@ export class AuthService {
         authResult: await this.createAuthResult(
           storedToken.user,
           transaction,
-          storedToken.sessionId,
-          nextTokenExpiresAt,
+          {
+            sessionId: storedToken.sessionId,
+            tokenExpiresAt: nextTokenExpiresAt,
+          },
         ),
       };
     });
@@ -187,13 +189,17 @@ export class AuthService {
   private async createAuthResult(
     user: PublicUser,
     transaction?: Prisma.TransactionClient,
-    sessionId?: string,
-    tokenExpiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
-    deviceName?: string,
+    options: {
+      sessionId?: string;
+      tokenExpiresAt?: Date;
+      deviceName?: string;
+    } = {},
   ): Promise<AuthResult> {
+    const tokenExpiresAt =
+      options.tokenExpiresAt ?? new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
     if (!transaction) {
       return this.prisma.$transaction((tx) =>
-        this.createAuthResult(user, tx, sessionId, tokenExpiresAt, deviceName),
+        this.createAuthResult(user, tx, options),
       );
     }
 
@@ -202,12 +208,12 @@ export class AuthService {
       email: user.email,
     });
     const refreshToken = randomBytes(48).toString('base64url');
-    const session = sessionId
-      ? { id: sessionId }
+    const session = options.sessionId
+      ? { id: options.sessionId }
       : await transaction.session.create({
           data: {
             userId: user.id,
-            deviceName: deviceName ?? null,
+            deviceName: options.deviceName ?? null,
             expiresAt: tokenExpiresAt,
           },
           select: { id: true },
