@@ -1,6 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
-import { ApiError } from '../lib/api-client';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { Product } from '../types';
+import { useCartStore } from '../cart/store';
 import { fetchProduct, fetchProducts } from './api';
+import { isConfirmedProductUnavailable } from './product-availability';
 
 export function useProducts() {
   return useQuery({
@@ -10,18 +13,28 @@ export function useProducts() {
 }
 
 export function useProduct(id: string) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const query = useQuery({
     queryKey: ['products', id],
-    queryFn: async ({ signal }) => {
-      try {
-        return await fetchProduct(id, signal);
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 404) {
-          return null;
-        }
-        throw error;
-      }
-    },
+    queryFn: ({ signal }) => fetchProduct(id, signal),
     enabled: id.length > 0,
+    retry: (failureCount, error) =>
+      !isConfirmedProductUnavailable(error) && failureCount < 1,
   });
+
+  useEffect(() => {
+    if (!isConfirmedProductUnavailable(query.error)) {
+      return;
+    }
+
+    queryClient.setQueryData<Product[]>(['products'], (products) =>
+      products?.filter((product) => product.id !== id),
+    );
+    queryClient.setQueryData<Product[]>(['cart-products'], (products) =>
+      products?.filter((product) => product.id !== id),
+    );
+    useCartStore.getState().markUnavailable(id);
+  }, [id, query.error, queryClient]);
+
+  return query;
 }

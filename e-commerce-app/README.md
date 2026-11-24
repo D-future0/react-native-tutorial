@@ -44,6 +44,9 @@ that app origin (for example, `http://172.20.10.13:8081`) to the backend's
   not queued or automatically retried; reconnect and explicitly submit after
   reviewing current prices and stock. Stock conflicts refresh the saved bag
   data before another attempt.
+- Before production deployment, implement server-side order idempotency keys
+  and an order-status recovery flow so interrupted submissions can be
+  reconciled safely before retrying.
 - Register and sign in with the backend. The access/refresh token pair is stored
   as one SecureStore record on Android/iOS and restored and refreshed on startup.
   Browsers use a single AsyncStorage record because Expo SecureStore is not
@@ -73,3 +76,5 @@ npx tsc --noEmit
   occurs after submission, verify the server order before manually retrying:
   the online-only flow does not persist offline orders or provide server-side
   idempotency for ambiguous responses.
+- Treat server-side idempotency keys and order-status recovery as production
+  requirements before enabling customer checkout.

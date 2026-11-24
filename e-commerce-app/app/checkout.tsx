@@ -368,8 +368,7 @@ export default function CheckoutScreen() {
             {!isOnline ? (
               <View style={styles.refreshWarning}>
                 <Text style={styles.refreshText}>
-                  You’re offline. Your bag stays saved; orders are only submitted
-                  online and will not be queued.
+                  You’re offline. Your bag stays saved; orders are only submitted online and will not be queued.
                 </Text>
               </View>
             ) : null}

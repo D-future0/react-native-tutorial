@@ -15,6 +15,7 @@ import { useCartStore } from '../../src/features/cart/store';
 import { useAddedFeedback } from '../../src/features/cart/use-added-feedback';
 import { useNetworkOnline } from '../../src/features/lib/network-manager';
 import { useProduct } from '../../src/features/products/hooks';
+import { isConfirmedProductUnavailable } from '../../src/features/products/product-availability';
 import type { Product } from '../../src/features/types';
 import { formatPrice, theme } from '../../src/theme';
 
@@ -30,6 +31,7 @@ export default function ProductDetailScreen() {
     error,
     refetch,
   } = useProduct(productId ?? '');
+  const isUnavailable = isConfirmedProductUnavailable(error);
   const isOnline = useNetworkOnline();
   const addItem = useCartStore((state) => state.addItem);
   const quantityInCart = useCartStore(
@@ -62,7 +64,7 @@ export default function ProductDetailScreen() {
         </View>
         <ErrorState
           message={
-            product === null
+            isUnavailable
               ? 'This product is no longer available.'
               : error instanceof Error
                 ? error.message
@@ -75,7 +77,7 @@ export default function ProductDetailScreen() {
   }
 
   function handleAdd(productToAdd: Product) {
-    if (addItem(productToAdd)) {
+    if (!isUnavailable && addItem(productToAdd)) {
       showAdded();
     }
   }
@@ -112,7 +114,11 @@ export default function ProductDetailScreen() {
           {product.description ?? 'Thoughtfully chosen for everyday use and made to be kept.'}
         </Text>
         <Text style={styles.stock}>
-          {outOfStock ? 'Out of stock' : `${product.stockQuantity} available`}
+          {isUnavailable
+            ? 'No longer available'
+            : outOfStock
+              ? 'Out of stock'
+              : `${product.stockQuantity} available`}
         </Text>
         {!isRefetchError && (isFetching || isStale || !isOnline) ? (
           <View accessibilityLiveRegion="polite" style={styles.cacheNotice}>
@@ -125,10 +131,18 @@ export default function ProductDetailScreen() {
             </Text>
           </View>
         ) : null}
-        {isRefetchError ? (
+        {isUnavailable ? (
+          <View accessibilityLiveRegion="polite" style={styles.refreshWarning}>
+            <Text style={styles.refreshText}>
+              This product is no longer available. Saved details are shown for
+              reference only.
+            </Text>
+          </View>
+        ) : isRefetchError ? (
           <View style={styles.refreshWarning}>
             <Text style={styles.refreshText}>
-              Couldn’t refresh this product. Showing the last loaded details.
+              Couldn’t refresh this product. Showing saved details; current
+              availability could not be confirmed.
             </Text>
             <Pressable onPress={() => void refetch()} accessibilityRole="button">
               <Text style={styles.retryText}>Retry</Text>
@@ -146,7 +160,9 @@ export default function ProductDetailScreen() {
       <View style={styles.footer}>
         <Button
           title={
-            isAdded
+            isUnavailable
+              ? 'No longer available'
+              : isAdded
               ? 'Added to bag ✓'
               : outOfStock
                 ? 'Out of stock'
@@ -155,11 +171,15 @@ export default function ProductDetailScreen() {
                   : 'Add to bag'
           }
           accessibilityLabel={
-            isAdded ? `${product.name} added to bag` : `Add ${product.name} to bag`
+            isUnavailable
+              ? `${product.name} is no longer available`
+              : isAdded
+                ? `${product.name} added to bag`
+                : `Add ${product.name} to bag`
           }
           accessibilityLiveRegion="polite"
           onPress={() => handleAdd(product)}
-          disabled={outOfStock || stockLimitReached}
+          disabled={isUnavailable || outOfStock || stockLimitReached}
           style={styles.addButton}
         />
         <Pressable

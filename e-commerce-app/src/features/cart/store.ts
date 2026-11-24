@@ -10,6 +10,7 @@ interface CartStore {
   setHydrated: (isHydrated: boolean) => void;
   setRefreshError: (error: string | null) => void;
   addItem: (product: Product) => boolean;
+  markUnavailable: (productId: string) => void;
   syncProducts: (products: Product[]) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -87,6 +88,7 @@ export const useCartStore = create<CartStore>()(
           );
           if (
             product.stockQuantity <= 0 ||
+            existing?.available === false ||
             (existing && existing.quantity >= product.stockQuantity)
           ) {
             return state;
@@ -129,6 +131,14 @@ export const useCartStore = create<CartStore>()(
         });
         return added;
       },
+      markUnavailable: (productId) =>
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.productId === productId
+              ? { ...item, available: false }
+              : item,
+          ),
+        })),
       syncProducts: (products) =>
         set((state) => {
           const productsById = new Map(
