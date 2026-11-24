@@ -13,6 +13,7 @@ import {
 } from './session';
 import { useAuthStore } from './store';
 import {
+  establishSession,
   logoutSession,
   refreshAccessToken,
   restoreSession,
@@ -153,6 +154,72 @@ describe('auth session lifecycle', () => {
     );
     expect(useAuthStore.getState().accessToken).toBeNull();
     expect(removeTokensMock).toHaveBeenCalledOnce();
+    expect(revokeMock).toHaveBeenCalledWith('new-refresh-token');
+  });
+
+  it('clears local credentials and revokes a new session if token persistence fails', async () => {
+    saveTokensMock.mockRejectedValue(new Error('Secure storage unavailable'));
+
+    await expect(
+      establishSession(Promise.resolve(authResponse)),
+    ).rejects.toThrow('Secure storage unavailable');
+
+    expect(removeTokensMock).toHaveBeenCalledOnce();
+    expect(revokeMock).toHaveBeenCalledWith('new-refresh-token');
+    expect(useAuthStore.getState().accessToken).toBeNull();
+  });
+
+  it('sets the access token only after storing the new session', async () => {
+    saveTokensMock.mockImplementation(async () => {
+      expect(useAuthStore.getState().accessToken).toBeNull();
+    });
+
+    await establishSession(Promise.resolve(authResponse));
+
+    expect(useAuthStore.getState().accessToken).toBe('new-access-token');
+  });
+
+  it('does not let a refresh started before logout restore authentication', async () => {
+    let resolveRefresh!: (response: AuthResponse) => void;
+    refreshMock.mockReturnValue(
+      new Promise<AuthResponse>((resolve) => {
+        resolveRefresh = resolve;
+      }),
+    );
+    const pendingRefresh = refreshAccessToken('expired-access-token');
+    await vi.waitFor(() => expect(refreshMock).toHaveBeenCalledOnce());
+
+    await logoutSession();
+    resolveRefresh(authResponse);
+
+    await expect(pendingRefresh).rejects.toThrow(
+      'The session operation was cancelled.',
+    );
+    expect(saveTokensMock).not.toHaveBeenCalled();
+    expect(revokeMock).toHaveBeenCalledWith('new-refresh-token');
+    expect(useAuthStore.getState().accessToken).toBeNull();
+  });
+
+  it('clears and revokes a refresh that was saving when logout began', async () => {
+    let resolveSave!: () => void;
+    saveTokensMock.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveSave = resolve;
+      }),
+    );
+    const pendingRefresh = refreshAccessToken('expired-access-token');
+    await vi.waitFor(() => expect(saveTokensMock).toHaveBeenCalledOnce());
+
+    const pendingLogout = logoutSession();
+    resolveSave();
+    await pendingLogout;
+
+    await expect(pendingRefresh).rejects.toThrow(
+      'The session operation was cancelled.',
+    );
+    expect(removeTokensMock).toHaveBeenCalled();
+    expect(revokeMock).toHaveBeenCalledWith('new-refresh-token');
+    expect(useAuthStore.getState().accessToken).toBeNull();
   });
 
   it('revokes and clears the session on logout', async () => {

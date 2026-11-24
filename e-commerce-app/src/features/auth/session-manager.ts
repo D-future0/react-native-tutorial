@@ -10,30 +10,105 @@ import {
   removeSessionTokens,
   saveSessionTokens,
 } from './session';
+import type { AuthResponse } from '../types';
 
 let refreshInFlight: Promise<string> | null = null;
+let sessionGeneration = 0;
+let logoutOperations = 0;
+let tokenStorageQueue: Promise<void> = Promise.resolve();
+
+class SessionOperationCancelledError extends Error {
+  constructor() {
+    super('The session operation was cancelled.');
+    this.name = 'SessionOperationCancelledError';
+  }
+}
+
+function isSessionCurrent(generation: number): boolean {
+  return generation === sessionGeneration && logoutOperations === 0;
+}
+
+function withTokenStorage<T>(operation: () => Promise<T>): Promise<T> {
+  const result = tokenStorageQueue.then(operation);
+  tokenStorageQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
+
+async function clearTokensForGeneration(generation: number): Promise<void> {
+  await withTokenStorage(async () => {
+    if (isSessionCurrent(generation)) {
+      await removeSessionTokens();
+    }
+  });
+}
+
+export async function establishSession(
+  authRequest: Promise<AuthResponse>,
+): Promise<void> {
+  const startedDuringLogout = logoutOperations > 0;
+  const generation = ++sessionGeneration;
+  useAuthStore.getState().setAccessToken(null);
+
+  const authResponse = await authRequest;
+  await withTokenStorage(async () => {
+    if (startedDuringLogout || !isSessionCurrent(generation)) {
+      await revokeSession(authResponse.refreshToken);
+      throw new SessionOperationCancelledError();
+    }
+
+    try {
+      await saveSessionTokens(
+        authResponse.accessToken,
+        authResponse.refreshToken,
+      );
+    } catch (error) {
+      await clearFailedSession(authResponse.refreshToken, error, generation);
+    }
+
+    if (!isSessionCurrent(generation)) {
+      await clearFailedSession(
+        authResponse.refreshToken,
+        new SessionOperationCancelledError(),
+        generation,
+      );
+    }
+    useAuthStore.getState().setAccessToken(authResponse.accessToken);
+  });
+}
 
 export async function restoreSession(): Promise<string | null> {
+  const generation = sessionGeneration;
   const { accessToken, refreshToken } = await getSessionTokens();
+  if (!isSessionCurrent(generation)) return null;
   if (!accessToken && !refreshToken) return null;
   if (!accessToken || !refreshToken) {
-    await removeSessionTokens();
+    await clearTokensForGeneration(generation);
     return null;
   }
 
   try {
     await fetchCurrentUser(accessToken, undefined, false);
-    return accessToken;
+    return isSessionCurrent(generation) ? accessToken : null;
   } catch (error) {
+    if (!isSessionCurrent(generation)) return null;
     if (!(error instanceof ApiError) || error.status !== 401) throw error;
   }
+  if (!isSessionCurrent(generation)) return null;
 
   let refreshedAccessToken: string;
   try {
-    refreshedAccessToken = await rotateTokens(refreshToken, false);
+    refreshedAccessToken = await rotateTokens(
+      refreshToken,
+      false,
+      generation,
+    );
   } catch (error) {
+    if (error instanceof SessionOperationCancelledError) return null;
     if (error instanceof ApiError && error.status === 401) {
-      await removeSessionTokens();
+      await clearTokensForGeneration(generation);
       return null;
     }
     throw error;
@@ -42,42 +117,64 @@ export async function restoreSession(): Promise<string | null> {
   try {
     await fetchCurrentUser(refreshedAccessToken, undefined, false);
   } catch (error) {
+    if (error instanceof SessionOperationCancelledError) return null;
     if (error instanceof ApiError && error.status === 401) {
-      await removeSessionTokens();
+      await clearTokensForGeneration(generation);
       return null;
     }
+    if (!isSessionCurrent(generation)) return null;
     throw error;
   }
-  return refreshedAccessToken;
+  return isSessionCurrent(generation) ? refreshedAccessToken : null;
 }
 
 export function refreshAccessToken(expiredAccessToken: string): Promise<string> {
+  if (logoutOperations > 0) {
+    return Promise.reject(new SessionOperationCancelledError());
+  }
   const currentToken = useAuthStore.getState().accessToken;
   if (currentToken && currentToken !== expiredAccessToken) {
     return Promise.resolve(currentToken);
   }
   if (refreshInFlight) return refreshInFlight;
 
+  const generation = sessionGeneration;
   refreshInFlight = getSessionTokens()
     .catch((error: unknown) => {
-      useAuthStore.getState().setAccessToken(null);
+      if (isSessionCurrent(generation)) {
+        useAuthStore.getState().setAccessToken(null);
+      }
       throw error;
     })
     .then(({ refreshToken }) => {
+      if (!isSessionCurrent(generation)) {
+        throw new SessionOperationCancelledError();
+      }
       if (!refreshToken) {
-        useAuthStore.getState().setAccessToken(null);
-        return removeSessionTokens().then(() => {
-          throw new ApiError('Your session expired. Please sign in again.', 401);
+        if (isSessionCurrent(generation)) {
+          useAuthStore.getState().setAccessToken(null);
+        }
+        return clearTokensForGeneration(generation).then(() => {
+          throw new ApiError(
+            'Your session expired. Please sign in again.',
+            401,
+          );
         });
       }
-      return rotateTokens(refreshToken, true);
+      return rotateTokens(refreshToken, true, generation);
     })
     .catch(async (error: unknown) => {
-      if (error instanceof ApiError && error.status === 401) {
+      if (
+        error instanceof ApiError &&
+        error.status === 401 &&
+        isSessionCurrent(generation)
+      ) {
         try {
-          await removeSessionTokens();
+          await clearTokensForGeneration(generation);
         } finally {
-          useAuthStore.getState().setAccessToken(null);
+          if (isSessionCurrent(generation)) {
+            useAuthStore.getState().setAccessToken(null);
+          }
         }
       }
       throw error;
@@ -92,62 +189,101 @@ export function refreshAccessToken(expiredAccessToken: string): Promise<string> 
 async function rotateTokens(
   refreshToken: string,
   updateStore: boolean,
+  generation: number,
 ): Promise<string> {
   const authResponse = await refreshSession(refreshToken);
-  try {
-    await saveSessionTokens(authResponse.accessToken, authResponse.refreshToken);
-  } catch (error) {
-    useAuthStore.getState().setAccessToken(null);
-    const cleanupErrors: unknown[] = [];
-    try {
-      await removeSessionTokens();
-    } catch (cleanupError) {
-      cleanupErrors.push(cleanupError);
+  await withTokenStorage(async () => {
+    if (!isSessionCurrent(generation)) {
+      await revokeSession(authResponse.refreshToken);
+      throw new SessionOperationCancelledError();
     }
+
     try {
-      await revokeSession(refreshToken);
-    } catch (cleanupError) {
-      cleanupErrors.push(cleanupError);
+      await saveSessionTokens(
+        authResponse.accessToken,
+        authResponse.refreshToken,
+      );
+    } catch (error) {
+      await clearFailedSession(authResponse.refreshToken, error, generation);
     }
-    if (cleanupErrors.length > 0) {
-      throw new AggregateError(
-        [error, ...cleanupErrors],
-        'Could not persist the refreshed session or complete session cleanup.',
+
+    if (!isSessionCurrent(generation)) {
+      await clearFailedSession(
+        authResponse.refreshToken,
+        new SessionOperationCancelledError(),
+        generation,
       );
     }
-    throw error;
-  }
-  if (updateStore) {
-    useAuthStore.getState().setAccessToken(authResponse.accessToken);
-  }
+    if (updateStore) {
+      useAuthStore.getState().setAccessToken(authResponse.accessToken);
+    }
+  });
   return authResponse.accessToken;
 }
 
+async function clearFailedSession(
+  refreshToken: string,
+  originalError: unknown,
+  generation: number,
+): Promise<never> {
+  if (generation === sessionGeneration) {
+    useAuthStore.getState().setAccessToken(null);
+  }
+  const cleanupErrors: unknown[] = [];
+  try {
+    await removeSessionTokens();
+  } catch (cleanupError) {
+    cleanupErrors.push(cleanupError);
+  }
+  try {
+    await revokeSession(refreshToken);
+  } catch (cleanupError) {
+    cleanupErrors.push(cleanupError);
+  }
+  if (cleanupErrors.length > 0) {
+    throw new AggregateError(
+      [originalError, ...cleanupErrors],
+      'Could not persist the session or complete credential cleanup.',
+    );
+  }
+  throw originalError;
+}
+
 export async function logoutSession(): Promise<void> {
+  sessionGeneration += 1;
+  logoutOperations += 1;
+  useAuthStore.getState().setAccessToken(null);
+
   let tokens: Awaited<ReturnType<typeof getSessionTokens>> | null = null;
   let storageError: unknown;
   let revocationError: unknown;
 
   try {
-    tokens = await getSessionTokens();
-  } catch (error) {
-    storageError = error;
-  }
+    await withTokenStorage(async () => {
+      try {
+        tokens = await getSessionTokens();
+      } catch (error) {
+        storageError = error;
+      }
 
-  try {
-    await removeSessionTokens();
-  } catch (error) {
-    storageError ??= error;
+      try {
+        await removeSessionTokens();
+      } catch (error) {
+        storageError ??= error;
+      } finally {
+        useAuthStore.getState().setAccessToken(null);
+      }
+
+      if (tokens?.refreshToken) {
+        try {
+          await revokeSession(tokens.refreshToken);
+        } catch (error) {
+          revocationError = error;
+        }
+      }
+    });
   } finally {
-    useAuthStore.getState().setAccessToken(null);
-  }
-
-  if (tokens?.refreshToken) {
-    try {
-      await revokeSession(tokens.refreshToken);
-    } catch (error) {
-      revocationError = error;
-    }
+    logoutOperations -= 1;
   }
 
   if (storageError) throw storageError;

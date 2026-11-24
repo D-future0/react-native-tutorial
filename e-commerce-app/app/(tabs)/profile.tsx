@@ -16,8 +16,10 @@ import Button from '../../src/components/Button';
 import ErrorState from '../../src/components/ErrorState';
 import LoadingState from '../../src/components/LoadingState';
 import { fetchCurrentUser, login, register } from '../../src/features/auth/api';
-import { saveSessionTokens } from '../../src/features/auth/session';
-import { logoutSession } from '../../src/features/auth/session-manager';
+import {
+  establishSession,
+  logoutSession,
+} from '../../src/features/auth/session-manager';
 import { useAuthStore } from '../../src/features/auth/store';
 import { loginSchema, registerSchema } from '../../src/features/auth/validation';
 import { theme } from '../../src/theme';
@@ -57,13 +59,11 @@ export default function ProfileScreen() {
 
     setBusy(true);
     try {
-      const response =
+      const authRequest =
         mode === 'register'
-          ? await register(result.data.email, result.data.password)
-          : await login(result.data.email, result.data.password);
-      setAccessToken(null);
-      await saveSessionTokens(response.accessToken, response.refreshToken);
-      setAccessToken(response.accessToken);
+          ? register(result.data.email, result.data.password)
+          : login(result.data.email, result.data.password);
+      await establishSession(authRequest);
       await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       setPassword('');
       setConfirmPassword('');

@@ -144,7 +144,7 @@ describe('concurrent API requests during session refresh', () => {
 
     expect(results.every((result) => result.status === 'rejected')).toBe(true);
     expect(refreshMock).toHaveBeenCalledOnce();
-    expect(revokeMock).toHaveBeenCalledWith('old-refresh-token');
+    expect(revokeMock).toHaveBeenCalledWith('new-refresh-token');
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(useAuthStore.getState().accessToken).toBeNull();
   });
