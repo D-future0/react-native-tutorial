@@ -12,6 +12,7 @@ import {
 import { useAuthStore } from '../src/features/auth/store';
 import CartBackgroundRefresh from '../src/features/cart/background-refresh';
 import { queryClient } from '../src/features/lib/query-client';
+import { installNetworkManager } from '../src/features/lib/network-manager';
 import { usePreferencesStore } from '../src/features/preferences/store';
 import { theme } from '../src/theme';
 
@@ -43,6 +44,7 @@ export default function RootLayout() {
   }, [loadTheme, setAccessToken, setHydrated]);
 
   useEffect(() => {
+    installNetworkManager();
     installSessionRefresh();
     void Promise.resolve().then(restoreSession);
   }, [restoreSession]);
