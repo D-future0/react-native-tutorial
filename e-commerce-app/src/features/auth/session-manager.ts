@@ -12,7 +12,11 @@ import {
 } from './session';
 import type { AuthResponse } from '../types';
 
-let refreshInFlight: Promise<string> | null = null;
+let refreshInFlight: {
+  generation: number;
+  id: symbol;
+  promise: Promise<string>;
+} | null = null;
 let sessionGeneration = 0;
 let logoutOperations = 0;
 let tokenStorageQueue: Promise<void> = Promise.resolve();
@@ -136,10 +140,13 @@ export function refreshAccessToken(expiredAccessToken: string): Promise<string> 
   if (currentToken && currentToken !== expiredAccessToken) {
     return Promise.resolve(currentToken);
   }
-  if (refreshInFlight) return refreshInFlight;
-
   const generation = sessionGeneration;
-  refreshInFlight = getSessionTokens()
+  if (refreshInFlight?.generation === generation) {
+    return refreshInFlight.promise;
+  }
+
+  const operationId = Symbol();
+  const refreshPromise = getSessionTokens()
     .catch((error: unknown) => {
       if (isSessionCurrent(generation)) {
         useAuthStore.getState().setAccessToken(null);
@@ -180,10 +187,17 @@ export function refreshAccessToken(expiredAccessToken: string): Promise<string> 
       throw error;
     })
     .finally(() => {
-      refreshInFlight = null;
+      if (refreshInFlight?.id === operationId) {
+        refreshInFlight = null;
+      }
     });
+  refreshInFlight = {
+    generation,
+    id: operationId,
+    promise: refreshPromise,
+  };
 
-  return refreshInFlight;
+  return refreshPromise;
 }
 
 async function rotateTokens(

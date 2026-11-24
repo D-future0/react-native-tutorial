@@ -200,6 +200,50 @@ describe('auth session lifecycle', () => {
     expect(useAuthStore.getState().accessToken).toBeNull();
   });
 
+  it('keeps a newer refresh in flight when an older generation finishes', async () => {
+    let resolveOldRefresh!: (response: AuthResponse) => void;
+    let resolveNewRefresh!: (response: AuthResponse) => void;
+    refreshMock
+      .mockReturnValueOnce(
+        new Promise<AuthResponse>((resolve) => {
+          resolveOldRefresh = resolve;
+        }),
+      )
+      .mockReturnValueOnce(
+        new Promise<AuthResponse>((resolve) => {
+          resolveNewRefresh = resolve;
+        }),
+      );
+
+    const oldRefresh = refreshAccessToken('old-access-token');
+    await vi.waitFor(() => expect(refreshMock).toHaveBeenCalledOnce());
+    await establishSession(Promise.resolve(authResponse));
+    const newRefresh = refreshAccessToken('new-access-token');
+    await vi.waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(2));
+
+    resolveOldRefresh({
+      ...authResponse,
+      accessToken: 'old-generation-access-token',
+      refreshToken: 'old-generation-refresh-token',
+    });
+    await expect(oldRefresh).rejects.toThrow(
+      'The session operation was cancelled.',
+    );
+
+    const waitingRefresh = refreshAccessToken('new-access-token');
+    expect(refreshMock).toHaveBeenCalledTimes(2);
+
+    resolveNewRefresh({
+      ...authResponse,
+      accessToken: 'latest-access-token',
+      refreshToken: 'latest-refresh-token',
+    });
+    await expect(Promise.all([newRefresh, waitingRefresh])).resolves.toEqual([
+      'latest-access-token',
+      'latest-access-token',
+    ]);
+  });
+
   it('clears and revokes a refresh that was saving when logout began', async () => {
     let resolveSave!: () => void;
     saveTokensMock.mockReturnValue(
