@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isNetworkOnline } from './network-manager';
+import { isNetworkOnline } from './network-policy';
 
 describe('isNetworkOnline', () => {
   it.each([
@@ -8,7 +8,10 @@ describe('isNetworkOnline', () => {
     [{ isConnected: true, isInternetReachable: false }, false],
     [{ isConnected: false, isInternetReachable: true }, false],
     [{ isConnected: null, isInternetReachable: null }, false],
-  ] as const)('returns %s for the given connectivity state', (state, expected) => {
-    expect(isNetworkOnline(state)).toBe(expected);
-  });
+  ] as const)(
+    'returns %s for the given connectivity state',
+    (state, expected) => {
+      expect(isNetworkOnline(state)).toBe(expected);
+    },
+  );
 });

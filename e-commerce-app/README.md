@@ -37,6 +37,13 @@ that app origin (for example, `http://172.20.10.13:8081`) to the backend's
   suggestion. The app does not store or send coordinates, and location
   suggestions should be checked before submitting the server-validated address.
 - View only orders associated with the signed-in account.
+- Restore public product and cart-product query data from AsyncStorage for up to
+  seven days. Cached details remain visible offline with a stale/offline notice;
+  authentication and order queries are not persisted.
+- The bag remains local and persistent, but checkout is online-only. Orders are
+  not queued or automatically retried; reconnect and explicitly submit after
+  reviewing current prices and stock. Stock conflicts refresh the saved bag
+  data before another attempt.
 - Register and sign in with the backend. The access/refresh token pair is stored
   as one SecureStore record on Android/iOS and restored and refreshed on startup.
   Browsers use a single AsyncStorage record because Expo SecureStore is not
@@ -52,3 +59,17 @@ npm run web
 npm test
 npx tsc --noEmit
 ```
+
+## Offline release checks
+
+- Load the catalog while online, terminate and relaunch the app in airplane
+  mode, and verify saved products, product details, and the bag are visible with
+  offline/stale notices.
+- Reconnect and verify the catalog and bag refresh. Test a removed product and
+  a stock reduction; removed or unavailable items must not be orderable.
+- Attempt checkout offline and verify it is disabled and no order is submitted
+  or queued. Reconnect, review refreshed prices and quantities, then submit.
+- Double-tap checkout and verify only one request is sent. If a network failure
+  occurs after submission, verify the server order before manually retrying:
+  the online-only flow does not persist offline orders or provide server-side
+  idempotency for ambiguous responses.

@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  onlineManager,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useAuthStore } from '../auth/store';
 import { createOrder, fetchOrders } from './api';
 import type { CreateOrderInput } from '../types';
@@ -22,7 +27,12 @@ export function useCreateOrder() {
   const accessToken = useAuthStore((state) => state.accessToken);
 
   return useMutation({
+    networkMode: 'always',
+    retry: false,
     mutationFn: (input: CreateOrderInput) => {
+      if (!onlineManager.isOnline()) {
+        throw new Error('You are offline. Orders are not queued for later.');
+      }
       if (!accessToken) {
         throw new Error('Sign in before placing an order.');
       }

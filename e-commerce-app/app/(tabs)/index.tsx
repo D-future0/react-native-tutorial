@@ -14,6 +14,7 @@ import LoadingState from '../../src/components/LoadingState';
 import ProductCard from '../../src/components/ProductCard';
 import { useCartStore } from '../../src/features/cart/store';
 import { useProducts } from '../../src/features/products/hooks';
+import { useNetworkOnline } from '../../src/features/lib/network-manager';
 import type { Product } from '../../src/features/types';
 import { theme } from '../../src/theme';
 
@@ -35,11 +36,14 @@ export default function DiscoverScreen() {
   const {
     data: products,
     isLoading,
+    isFetching,
+    isStale,
     isError,
     isRefetchError,
     error,
     refetch,
   } = useProducts();
+  const isOnline = useNetworkOnline();
   const addItem = useCartStore((state) => state.addItem);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<Category>('All finds');
@@ -58,11 +62,26 @@ export default function DiscoverScreen() {
       );
     });
   }, [category, products, search]);
+  const dataStatus = !products || isRefetchError
+    ? null
+    : isFetching
+      ? 'Refreshing saved products…'
+      : !isOnline
+        ? 'You are Offline - showing saved products. Stock may have changed.'
+        : isStale
+          ? 'Showing saved products that may be out of date.'
+          : null;
 
   if (isLoading && !products) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <LoadingState label="Finding the good stuff…" />
+        <LoadingState
+          label={
+            isOnline
+              ? 'Finding the good stuff…'
+              : 'You’re offline and no saved products are available.'
+          }
+        />
       </SafeAreaView>
     );
   }
@@ -111,6 +130,11 @@ export default function DiscoverScreen() {
                 >
                   <Text style={styles.retryText}>Retry</Text>
                 </Pressable>
+              </View>
+            ) : null}
+            {dataStatus ? (
+              <View accessibilityLiveRegion="polite" style={styles.dataStatus}>
+                <Text style={styles.dataStatusText}>{dataStatus}</Text>
               </View>
             ) : null}
             <View style={styles.topBar}>
@@ -301,4 +325,11 @@ const styles = StyleSheet.create({
   },
   refreshText: { flex: 1, color: theme.colors.muted, fontSize: 12, lineHeight: 18 },
   retryText: { color: theme.colors.primary, fontSize: 12, fontWeight: '700' },
+  dataStatus: {
+    marginBottom: 12,
+    padding: 10,
+    borderRadius: theme.radius.small,
+    backgroundColor: '#EFEEE7',
+  },
+  dataStatusText: { color: theme.colors.muted, fontSize: 12, lineHeight: 18 },
 });

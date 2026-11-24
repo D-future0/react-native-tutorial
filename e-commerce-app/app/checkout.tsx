@@ -21,6 +21,7 @@ import { cartProductsQueryKey } from '../src/features/cart/background-refresh';
 import { useCartStore } from '../src/features/cart/store';
 import { useCreateOrder } from '../src/features/orders/hooks';
 import { useAuthStore } from '../src/features/auth/store';
+import { useNetworkOnline } from '../src/features/lib/network-manager';
 import { formatPrice, theme } from '../src/theme';
 import {
   getCurrentAddress,
@@ -32,6 +33,7 @@ export default function CheckoutScreen() {
   const clearCart = useCartStore((state) => state.clearCart);
   const refreshError = useCartStore((state) => state.refreshError);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const isOnline = useNetworkOnline();
   const { mutateAsync, isPending } = useCreateOrder();
   const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -43,6 +45,7 @@ export default function CheckoutScreen() {
   const [permissionDenied, setPermissionDenied] = useState(false);
   const locationRequestId = useRef(0);
   const addressRevision = useRef(0);
+  const orderSubmissionInProgress = useRef(false);
   const isFocused = useRef(false);
   const hasActiveLookup = useRef(false);
   const wasInterrupted = useRef(false);
@@ -171,7 +174,14 @@ export default function CheckoutScreen() {
   }
 
   async function placeOrder() {
+    if (orderSubmissionInProgress.current) return;
     setSubmitError(null);
+    if (!isOnline) {
+      setSubmitError(
+        'You’re offline. Your bag is saved, but orders are not queued. Reconnect to place your order.',
+      );
+      return;
+    }
     const confirmedAddress = deliveryAddress.trim();
     if (!confirmedAddress) {
       setAddressError('Enter a delivery address to continue.');
@@ -182,6 +192,7 @@ export default function CheckoutScreen() {
       return;
     }
     setAddressError(null);
+    orderSubmissionInProgress.current = true;
     try {
       const order = await mutateAsync({
         items: items.map(({ productId, quantity }) => ({ productId, quantity })),
@@ -200,6 +211,8 @@ export default function CheckoutScreen() {
       setSubmitError(
         error instanceof Error ? error.message : 'Your order could not be submitted.',
       );
+    } finally {
+      orderSubmissionInProgress.current = false;
     }
   }
 
@@ -352,6 +365,14 @@ export default function CheckoutScreen() {
                 </Pressable>
               </View>
             ) : null}
+            {!isOnline ? (
+              <View style={styles.refreshWarning}>
+                <Text style={styles.refreshText}>
+                  You’re offline. Your bag stays saved; orders are only submitted
+                  online and will not be queued.
+                </Text>
+              </View>
+            ) : null}
             {hasUnavailableItems ? (
               <Text style={styles.unavailableText}>
                 Update quantities or remove out-of-stock items before placing the order.
@@ -376,7 +397,9 @@ export default function CheckoutScreen() {
               title={`Place order · ${formatPrice(totalCents)}`}
               onPress={() => void placeOrder()}
               loading={isPending}
-              disabled={isPending || hasUnavailableItems || !accessToken}
+              disabled={
+                isPending || hasUnavailableItems || !accessToken || !isOnline
+              }
             />
           </View>
         </>

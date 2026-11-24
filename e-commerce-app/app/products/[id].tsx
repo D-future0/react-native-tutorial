@@ -13,6 +13,7 @@ import LoadingState from '../../src/components/LoadingState';
 import ProductImage from '../../src/components/ProductImage';
 import { useCartStore } from '../../src/features/cart/store';
 import { useAddedFeedback } from '../../src/features/cart/use-added-feedback';
+import { useNetworkOnline } from '../../src/features/lib/network-manager';
 import { useProduct } from '../../src/features/products/hooks';
 import type { Product } from '../../src/features/types';
 import { formatPrice, theme } from '../../src/theme';
@@ -23,10 +24,13 @@ export default function ProductDetailScreen() {
   const {
     data: product,
     isLoading,
+    isFetching,
+    isStale,
     isRefetchError,
     error,
     refetch,
   } = useProduct(productId ?? '');
+  const isOnline = useNetworkOnline();
   const addItem = useCartStore((state) => state.addItem);
   const quantityInCart = useCartStore(
     (state) =>
@@ -37,7 +41,13 @@ export default function ProductDetailScreen() {
   if (isLoading && !product) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <LoadingState label="Opening this find…" />
+        <LoadingState
+          label={
+            isOnline
+              ? 'Opening this find…'
+              : 'You’re offline and this product is not saved on this device.'
+          }
+        />
       </SafeAreaView>
     );
   }
@@ -51,7 +61,13 @@ export default function ProductDetailScreen() {
           </Pressable>
         </View>
         <ErrorState
-          message={error instanceof Error ? error.message : 'This product could not be found.'}
+          message={
+            product === null
+              ? 'This product is no longer available.'
+              : error instanceof Error
+                ? error.message
+                : 'This product could not be found.'
+          }
           onRetry={() => void refetch()}
         />
       </SafeAreaView>
@@ -98,6 +114,17 @@ export default function ProductDetailScreen() {
         <Text style={styles.stock}>
           {outOfStock ? 'Out of stock' : `${product.stockQuantity} available`}
         </Text>
+        {!isRefetchError && (isFetching || isStale || !isOnline) ? (
+          <View accessibilityLiveRegion="polite" style={styles.cacheNotice}>
+            <Text style={styles.cacheNoticeText}>
+              {isFetching
+                ? 'Refreshing saved product details…'
+                : !isOnline
+                  ? 'Offline—showing saved details. Stock may have changed.'
+                  : 'Showing saved details that may be out of date.'}
+            </Text>
+          </View>
+        ) : null}
         {isRefetchError ? (
           <View style={styles.refreshWarning}>
             <Text style={styles.refreshText}>
@@ -196,6 +223,13 @@ const styles = StyleSheet.create({
   },
   refreshText: { flex: 1, color: theme.colors.muted, fontSize: 12, lineHeight: 18 },
   retryText: { color: theme.colors.primary, fontSize: 12, fontWeight: '700' },
+  cacheNotice: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: theme.radius.small,
+    backgroundColor: '#EFEEE7',
+  },
+  cacheNoticeText: { color: theme.colors.muted, fontSize: 12, lineHeight: 18 },
   detailCard: {
     marginTop: 22,
     padding: 18,

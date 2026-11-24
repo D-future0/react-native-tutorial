@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { ApiError } from '../lib/api-client';
 import { fetchProduct, fetchProducts } from './api';
 
 export function useProducts() {
@@ -11,7 +12,16 @@ export function useProducts() {
 export function useProduct(id: string) {
   return useQuery({
     queryKey: ['products', id],
-    queryFn: ({ signal }) => fetchProduct(id, signal),
+    queryFn: async ({ signal }) => {
+      try {
+        return await fetchProduct(id, signal);
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) {
+          return null;
+        }
+        throw error;
+      }
+    },
     enabled: id.length > 0,
   });
 }
