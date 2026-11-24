@@ -146,9 +146,13 @@ only as SHA-256 hashes. Refresh or logout with:
 }
 ```
 
-Refreshing revokes the submitted token and returns a replacement token pair;
-reusing a refresh token is rejected. Logout revokes the refresh token. Access
-tokens remain valid until their one-hour expiry. Send the access token as
+Each login or registration creates a server-side session family. The backend
+stores the optional `X-Device-Name` header as the session device name, falling
+back to the request's `User-Agent` when the header is absent. Refreshing
+rotates the token within that family; reusing a revoked token revokes the whole
+family. Logout revokes the entire family associated with the submitted token,
+including when it is an already-rotated token. Access tokens remain valid until
+their one-hour expiry. Send the access token as
 `Authorization: Bearer <accessToken>` to access `/auth/me` and the order endpoints.
 
 Product endpoints are public; order endpoints and `/auth/me` require

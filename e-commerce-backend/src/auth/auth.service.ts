@@ -34,7 +34,10 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  async register(input: RegisterInput): Promise<AuthResult> {
+  async register(
+    input: RegisterInput,
+    deviceName?: string,
+  ): Promise<AuthResult> {
     let user: PublicUser;
 
     try {
@@ -55,10 +58,10 @@ export class AuthService {
       throw error;
     }
 
-    return this.createAuthResult(user);
+    return this.createAuthResult(user, undefined, undefined, undefined, deviceName);
   }
 
-  async login(input: LoginInput): Promise<AuthResult> {
+  async login(input: LoginInput, deviceName?: string): Promise<AuthResult> {
     const user = await this.prisma.user.findUnique({
       where: { email: input.email },
     });
@@ -67,7 +70,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    return this.createAuthResult(user);
+    return this.createAuthResult(user, undefined, undefined, undefined, deviceName);
   }
 
   async getProfile(userId: string): Promise<PublicUser> {
@@ -87,22 +90,50 @@ export class AuthService {
     const tokenHash = this.hashRefreshToken(rawToken);
     const now = new Date();
 
-    return this.prisma.$transaction(async (transaction) => {
+    const outcome = await this.prisma.$transaction(async (transaction) => {
       const storedToken = await transaction.refreshToken.findUnique({
         where: { tokenHash },
         include: {
           user: {
             select: { id: true, email: true, createdAt: true },
           },
+          session: true,
         },
       });
 
+      if (!storedToken) {
+        return { kind: 'invalid' as const };
+      }
+
+      if (storedToken.revokedAt) {
+        await this.revokeSessionFamily(
+          transaction,
+          storedToken.sessionId,
+          now,
+        );
+        return { kind: 'reuse' as const };
+      }
+
       if (
-        !storedToken ||
-        storedToken.revokedAt ||
-        storedToken.expiresAt <= now
+        storedToken.expiresAt <= now ||
+        (storedToken.session &&
+          (storedToken.session.revokedAt ||
+            storedToken.session.expiresAt <= now))
       ) {
-        throw new UnauthorizedException('Invalid or expired refresh token');
+        return { kind: 'invalid' as const };
+      }
+
+      const nextTokenExpiresAt = new Date(now.getTime() + REFRESH_TOKEN_TTL_MS);
+      const activeSession = await transaction.session.updateMany({
+        where: {
+          id: storedToken.sessionId,
+          revokedAt: null,
+          expiresAt: { gt: now },
+        },
+        data: { expiresAt: nextTokenExpiresAt },
+      });
+      if (activeSession.count !== 1) {
+        return { kind: 'invalid' as const };
       }
 
       const revoked = await transaction.refreshToken.updateMany({
@@ -115,30 +146,54 @@ export class AuthService {
       });
 
       if (revoked.count !== 1) {
-        throw new UnauthorizedException('Invalid or expired refresh token');
+        await this.revokeSessionFamily(
+          transaction,
+          storedToken.sessionId,
+          now,
+        );
+        return { kind: 'reuse' as const };
       }
 
-      return this.createAuthResult(storedToken.user, transaction);
+      return {
+        kind: 'success' as const,
+        authResult: await this.createAuthResult(
+          storedToken.user,
+          transaction,
+          storedToken.sessionId,
+          nextTokenExpiresAt,
+        ),
+      };
     });
+
+    if (outcome.kind !== 'success') {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+    return outcome.authResult;
   }
 
   async revokeRefreshToken(rawToken: string): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
-      where: {
-        tokenHash: this.hashRefreshToken(rawToken),
-        revokedAt: null,
-      },
-      data: { revokedAt: new Date() },
+    const now = new Date();
+    await this.prisma.$transaction(async (transaction) => {
+      const storedToken = await transaction.refreshToken.findUnique({
+        where: { tokenHash: this.hashRefreshToken(rawToken) },
+        select: { sessionId: true },
+      });
+
+      if (!storedToken) return;
+      await this.revokeSessionFamily(transaction, storedToken.sessionId, now);
     });
   }
 
   private async createAuthResult(
     user: PublicUser,
     transaction?: Prisma.TransactionClient,
+    sessionId?: string,
+    tokenExpiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+    deviceName?: string,
   ): Promise<AuthResult> {
     if (!transaction) {
       return this.prisma.$transaction((tx) =>
-        this.createAuthResult(user, tx),
+        this.createAuthResult(user, tx, sessionId, tokenExpiresAt, deviceName),
       );
     }
 
@@ -147,11 +202,22 @@ export class AuthService {
       email: user.email,
     });
     const refreshToken = randomBytes(48).toString('base64url');
+    const session = sessionId
+      ? { id: sessionId }
+      : await transaction.session.create({
+          data: {
+            userId: user.id,
+            deviceName: deviceName ?? null,
+            expiresAt: tokenExpiresAt,
+          },
+          select: { id: true },
+        });
     await transaction.refreshToken.create({
       data: {
         tokenHash: this.hashRefreshToken(refreshToken),
         userId: user.id,
-        expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+        sessionId: session.id,
+        expiresAt: tokenExpiresAt,
       },
     });
 
@@ -162,6 +228,21 @@ export class AuthService {
       expiresIn: 3600,
       user,
     };
+  }
+
+  private async revokeSessionFamily(
+    transaction: Prisma.TransactionClient,
+    sessionId: string,
+    revokedAt: Date,
+  ): Promise<void> {
+    await transaction.session.updateMany({
+      where: { id: sessionId, revokedAt: null },
+      data: { revokedAt },
+    });
+    await transaction.refreshToken.updateMany({
+      where: { sessionId, revokedAt: null },
+      data: { revokedAt },
+    });
   }
 
   private hashRefreshToken(token: string): string {

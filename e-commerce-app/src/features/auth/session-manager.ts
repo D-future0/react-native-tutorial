@@ -98,10 +98,22 @@ async function rotateTokens(
     await saveSessionTokens(authResponse.accessToken, authResponse.refreshToken);
   } catch (error) {
     useAuthStore.getState().setAccessToken(null);
+    const cleanupErrors: unknown[] = [];
     try {
       await removeSessionTokens();
-    } catch {
-      // Preserve the storage failure; an incomplete pair is rejected at restore.
+    } catch (cleanupError) {
+      cleanupErrors.push(cleanupError);
+    }
+    try {
+      await revokeSession(refreshToken);
+    } catch (cleanupError) {
+      cleanupErrors.push(cleanupError);
+    }
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(
+        [error, ...cleanupErrors],
+        'Could not persist the refreshed session or complete session cleanup.',
+      );
     }
     throw error;
   }

@@ -28,6 +28,12 @@ interface AuthenticatedRequest extends Request {
   user: { sub: string };
 }
 
+function getDeviceName(request: Request): string | undefined {
+  const deviceName =
+    request.get('x-device-name')?.trim() || request.get('user-agent')?.trim();
+  return deviceName ? deviceName.slice(0, 128) : undefined;
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -35,15 +41,17 @@ export class AuthController {
   @Post('register')
   register(
     @Body(new ZodValidationPipe(registerSchema)) body: RegisterInput,
+    @Req() request: Request,
   ): Promise<AuthResult> {
-    return this.authService.register(body);
+    return this.authService.register(body, getDeviceName(request));
   }
 
   @Post('login')
   login(
     @Body(new ZodValidationPipe(loginSchema)) body: LoginInput,
+    @Req() request: Request,
   ): Promise<AuthResult> {
-    return this.authService.login(body);
+    return this.authService.login(body, getDeviceName(request));
   }
 
   @Post('refresh')

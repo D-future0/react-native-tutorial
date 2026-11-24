@@ -27,8 +27,11 @@ export default function RootLayout() {
     setHydrated(false);
     setSessionError(null);
     setAccessToken(null);
+    void loadTheme().catch((error: unknown) => {
+      console.error('Could not load the saved theme preference.', error);
+    });
     try {
-      const [accessToken] = await Promise.all([restoreStoredSession(), loadTheme()]);
+      const accessToken = await restoreStoredSession();
       setAccessToken(accessToken);
     } catch (error) {
       setSessionError(
